@@ -1,66 +1,162 @@
-## Foundry
+```md
+# 🏛️ ChainLegacy
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+**A decentralized smart inheritance protocol.**  
+Ensure your digital assets are securely passed on — even when you’re not around to do it yourself.
 
-Foundry consists of:
+---
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+## ✨ What is ChainLegacy?
 
-## Documentation
+ChainLegacy lets you register inheritors for your crypto assets and define the conditions under which those assets will be transferred — like inactivity, custom age locks (e.g. turning 18), or timeouts. Think of it as a **will on the blockchain**.
 
-https://book.getfoundry.sh/
+No middlemen. No lawyers. Just code, Chainlink, and your legacy.
 
-## Usage
+---
 
-### Build
+## 🛠️ Tech Stack & Architecture
 
-```shell
-$ forge build
+| Layer            | Tech                        |
+|------------------|-----------------------------|
+| Smart Contracts  | Solidity                    |
+| Framework        | Foundry                     |
+| Chainlink Tools  | Automation (Keepers)        |
+| Token Standard   | ERC20 (`LegacyToken`)       |
+| Data Layer       | Ethereum Storage            |
+| Frontend (Planned) | React + RainbowKit (TBD) |
+
+### 🔗 Chainlink Integration
+
+ChainLegacy uses **Chainlink Automation** to monitor user activity (via `keepAlive()`) and trigger asset transfers when conditions are met (`performUpkeep`). All asset distribution is **on-chain and permissionless**.
+
+---
+
+## 🧪 Features
+
+- 🧾 Register inheritors with custom percentages
+- ⏳ Automated inheritance via Chainlink Automation
+- 🎂 Age-based unlocking (e.g. daughter inherits at 18)
+- 💀 Dead man's switch (`keepAlive` timeout)
+- 🪙 ERC20 token support (NFT support coming soon)
+- 🔒 Fully non-custodial
+
+---
+
+## 🧠 How It Works
+
+1. **Deploy ChainLegacy**
+2. **Register your plan**:
+   - Inheritors and their birth years
+   - Percentage splits (must total 100)
+   - Timeout (e.g. 30 days)
+   - Assets (ERC20 tokens)
+3. **Transfer assets to contract**
+4. **Ping `keepAlive()` regularly**
+5. **Chainlink Automation** checks inactivity
+6. If user inactive and inheritor is age-eligible, assets are distributed
+
+---
+
+## 📁 Repo Structure
+
 ```
 
-### Test
+/src
+├── ChainLegacy.sol       # Core protocol logic
+└── LegacyToken.sol       # Mintable demo token (ERC20)
 
-```shell
-$ forge test
+/test
+└── ChainLegacy.t.sol     # Foundry unit tests
+
+/script
+└── DeployChainLegacy.s.sol  # Deployment script
+
+````
+
+---
+
+## ⚙️ Local Setup & Testing
+
+```bash
+forge install
+forge build
+forge test 
+````
+
+---
+
+## 🚀 Deploy to Testnet
+
+Set your private key in `.env`:
+
+```bash
+PRIVATE_KEY=your_private_key_here
+RPC_URL=http://localhost:8545
 ```
 
-### Format
+Then run:
 
-```shell
-$ forge fmt
+```bash
+forge script script/DeployChainLegacy.s.sol \
+  --rpc-url $RPC_URL \
+  --broadcast -vvvv
+```
+or
+
+```
+make deploy
 ```
 
-### Gas Snapshots
+---
 
-```shell
-$ forge snapshot
+## 🧪 Example Test Output
+
+```bash
+[PASS] test_InheritanceTransfersToInheritors() (gas: 102317)
+Test result: All 1 tests passed!
 ```
 
-### Anvil
+---
 
-```shell
-$ anvil
+## 📹 Demo Video
+
+📺 [Watch the Demo](#)
+*(3–5 minutes, public video showing contract functionality, test results, and Chainlink usage)*
+
+---
+
+## 🔐 Chainlink Hackathon Requirements
+
+✅ Uses Chainlink Automation
+✅ Smart contract changes state via Chainlink
+✅ Public source code (GitHub)
+✅ Video demo + README
+
+---
+
+## 📄 License
+
+MIT — use it, remix it, pass the legacy on.
+
+---
+
+## 👨🏽‍💻 Author
+
+**Obaka Idris**
+Aspiring blockchain engineer building public-good protocols that *outlive their creators.*
+[GitHub: @obakas](https://github.com/obakas/ChainLegacy)
+
+---
+
 ```
 
-### Deploy
+---
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
-```
+## 🧠 Final Tips:
+- Replace the YouTube link under “📹 Demo Video” when ready
+- Replace `@yourusername` with your actual GitHub handle
+- Screenshot the test results and include a screenshot if you want extra sauce
+- Want a `docs/` folder with visuals? Easy peasy — just ask.
 
-### Cast
-
-```shell
-$ cast <subcommand>
-```
-
-### Help
-
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
+Now hit `git add README.md`, commit it, and flex on that GitHub repo like it’s a museum exhibit for smart wills. 🎨📜👑
 ```
