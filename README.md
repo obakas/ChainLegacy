@@ -150,13 +150,3 @@ Aspiring blockchain engineer building public-good protocols that *outlive their 
 
 ```
 
----
-
-## 🧠 Final Tips:
-- Replace the YouTube link under “📹 Demo Video” when ready
-- Replace `@yourusername` with your actual GitHub handle
-- Screenshot the test results and include a screenshot if you want extra sauce
-- Want a `docs/` folder with visuals? Easy peasy — just ask.
-
-Now hit `git add README.md`, commit it, and flex on that GitHub repo like it’s a museum exhibit for smart wills. 🎨📜👑
-```
