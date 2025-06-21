@@ -112,8 +112,11 @@ make deploy
 ## 🧪 Example Test Output
 
 ```bash
-[PASS] test_InheritanceTransfersToInheritors() (gas: 102317)
-Test result: All 1 tests passed!
+Ran 3 tests for test/ChainLegacy.t.sol:ChainLegacyTest
+[PASS] testKeepAlivePreventsUpkeep() (gas: 245038)
+[PASS] testRegisterPlanMismatchedArrays() (gas: 26255)
+[PASS] testRegisterPlanPercentagesNot100() (gas: 29097)
+Suite result: ok. 3 passed; 0 failed; 0 skipped; finished in 30.72ms (8.23ms CPU time)
 ```
 
 ---
