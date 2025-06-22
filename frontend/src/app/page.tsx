@@ -4,7 +4,7 @@ import React from 'react';
 import { useAccount } from "wagmi";
 import { FaUserShield } from "react-icons/fa";
 import Dashboard from '@/components/Dashboard';
-
+// console.log("🏠 Home page loaded");
 
 
 export default function Home() {
@@ -28,6 +28,7 @@ export default function Home() {
       {isConnected && (
         <div className="mt-6 text-center">
           <p className="mb-2">Welcome, {address}</p>
+          
           <Dashboard />
         </div>
       )}

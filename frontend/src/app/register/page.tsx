@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
-import { useWriteContract, useAccount, useChainId, useWaitForTransactionReceipt, useReadContract, useConfig } from 'wagmi'
-import { parseEther } from 'viem'
+import { useWriteContract, useAccount} from 'wagmi'
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants'
 import toast, { Renderable, Toast, ValueFunction } from 'react-hot-toast'
 

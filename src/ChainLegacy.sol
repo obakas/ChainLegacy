@@ -110,4 +110,48 @@ contract ChainLegacy is AutomationCompatibleInterface {
 
         plan.active = false;
     }
+
+    function getPlan(
+        address user
+    )
+        external
+        view
+        returns (
+            InheritorInfo[] memory,
+            address[] memory,
+            uint256,
+            uint256,
+            bool
+        )
+    {
+        LegacyPlan storage plan = plans[user];
+        return (
+            plan.inheritors,
+            plan.tokens,
+            plan.timeout,
+            plan.lastPing,
+            plan.active
+        );
+    }
+
+    function getPlanSummary(
+        address user
+    )
+        external
+        view
+        returns (
+            uint256 inheritorCount,
+            uint256 timeout,
+            uint256 lastPing,
+            bool active
+        )
+    {
+        LegacyPlan storage plan = plans[user];
+        return (
+            plan.inheritors.length,
+            plan.timeout,
+            plan.lastPing,
+            plan.active
+        );
+    }
 }

@@ -28,6 +28,96 @@ export const ChainLegacy_ABI = [
         },
         {
             "type": "function",
+            "name": "getPlan",
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "tuple[]",
+                    "internalType": "struct ChainLegacy.InheritorInfo[]",
+                    "components": [
+                        {
+                            "name": "inheritor",
+                            "type": "address",
+                            "internalType": "address"
+                        },
+                        {
+                            "name": "percent",
+                            "type": "uint256",
+                            "internalType": "uint256"
+                        },
+                        {
+                            "name": "unlockTimestamp",
+                            "type": "uint256",
+                            "internalType": "uint256"
+                        }
+                    ]
+                },
+                {
+                    "name": "",
+                    "type": "address[]",
+                    "internalType": "address[]"
+                },
+                {
+                    "name": "",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                },
+                {
+                    "name": "",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                },
+                {
+                    "name": "",
+                    "type": "bool",
+                    "internalType": "bool"
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
+            "name": "getPlanSummary",
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "inheritorCount",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                },
+                {
+                    "name": "timeout",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                },
+                {
+                    "name": "lastPing",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                },
+                {
+                    "name": "active",
+                    "type": "bool",
+                    "internalType": "bool"
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
             "name": "keepAlive",
             "inputs": [],
             "outputs": [],

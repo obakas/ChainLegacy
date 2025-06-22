@@ -1,9 +1,14 @@
 "use client";
 import { useWriteContract, useAccount, useChainId, useWaitForTransactionReceipt, useReadContract, useConfig } from "wagmi";
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants'
-import toast from "react-hot-toast";
+import toast, { Renderable, Toast, ValueFunction } from "react-hot-toast";
+import { useEffect } from "react";
+
+// console.log("📦 Dashboard component loaded");
+
 
 export default function Dashboard() {
+    // console.log("Chain ID:", useChainId());
     const { address } = useAccount();
 
     const {
@@ -15,17 +20,26 @@ export default function Dashboard() {
         abi: ChainLegacy_ABI,
         functionName: "getPlan",
         args: [address!],
-        enabled: !!address,
-        watch: true,
     });
 
-    const { write: keepAlive } = useWriteContract({
-        address: ChainLegacy_Address,
-        abi: ChainLegacy_ABI,
-        functionName: "keepAlive",
-        onSuccess: () => toast.success("KeepAlive pinged successfully!"),
-        onError: (err) => toast.error(err.message),
-    });
+    const { writeContract } = useWriteContract();
+
+
+    // const { writeContract } = useWriteContract({
+    //     address: ChainLegacy_Address,//error 1:Object literal may only specify known properties, and 'address' does not exist in type 'UseWriteContractParameters<Config, unknown>'
+    //     abi: ChainLegacy_ABI,
+    //     functionName: "keepAlive",
+    //     onSuccess: () => toast.success("KeepAlive pinged successfully!"),
+    //     onError: (err: { message: Renderable | ValueFunction<Renderable, Toast>; }) => toast.error(err.message),
+    // });
+
+    useEffect(() => {
+        console.log("Address:", address);
+        console.log("PlanData:", planData);
+        console.log("Loading:", isLoading);
+        console.log("Error:", isError);
+    }, [address, planData, isLoading, isError]);
+
 
     if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;
     if (isLoading) return <p className="text-center mt-12">Loading your plan...</p>;
@@ -43,10 +57,16 @@ export default function Dashboard() {
         // planData is either a tuple OR object
         if (Array.isArray(planData)) {
             [inheritors, timeout, lastPing] = planData;
-        } else if (planData.inheritors) {
-            inheritors = planData.inheritors;
-            timeout = planData.timeout;
-            lastPing = planData.lastPing;
+        } else if (
+            planData &&
+            typeof planData === "object" &&
+            "inheritors" in planData &&
+            "timeout" in planData &&
+            "lastPing" in planData
+        ) {
+            inheritors = (planData as { inheritors: any[] }).inheritors;
+            timeout = (planData as { timeout: string }).timeout;
+            lastPing = (planData as { lastPing: string }).lastPing;
         }
     } catch (e) {
         console.error("Error parsing planData", e);
@@ -63,7 +83,18 @@ export default function Dashboard() {
             </div>
 
             <button
-                onClick={() => keepAlive()}
+                onClick={() => {
+                    try {
+                        writeContract({
+                            address: ChainLegacy_Address,
+                            abi: ChainLegacy_ABI,
+                            functionName: "keepAlive",
+                        });
+                        toast.success("KeepAlive pinged successfully!");
+                    } catch (err: any) {
+                        toast.error(err?.message || "Failed to ping KeepAlive.");
+                    }
+                }}
                 className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700"
             >
                 Ping KeepAlive
