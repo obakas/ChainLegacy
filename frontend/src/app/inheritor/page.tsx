@@ -14,7 +14,6 @@ export default function InheritorPage() {
     const { data, isLoading } = useBalance({
         address,
         token: LegacyToken_Address,
-        watch: true,
     });
 
     useEffect(() => {

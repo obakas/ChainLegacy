@@ -4,19 +4,13 @@ import { useState } from "react";
 import { useWriteContract, useAccount, useChainId, useWaitForTransactionReceipt, useReadContract, useConfig } from "wagmi";
 import { parseEther } from "viem";
 import { ChainLegacy_ABI, ChainLegacy_Address, LegacyToken_Address, LegacyToken_ABI } from "@/constants";
-import toast from "react-hot-toast";
+import toast, { Renderable, Toast, ValueFunction } from "react-hot-toast";
 
 export default function DepositAssetsPage() {
     const { address } = useAccount();
     const [amount, setAmount] = useState("0.1");
 
-    const { write, isLoading } = useWriteContract({
-        address: LegacyToken_Address,
-        abi: LegacyToken_ABI,
-        functionName: "transfer",
-        onError: (err) => toast.error(err.message),
-        onSuccess: () => toast.success("Deposit successful!"),
-    });
+    const { writeContract, isPending } = useWriteContract();
 
     const handleDeposit = async () => {
         if (!amount || parseFloat(amount) <= 0) {
@@ -24,9 +18,18 @@ export default function DepositAssetsPage() {
         }
 
         try {
-            await write({
-                args: [ChainLegacy_Address, parseEther(amount)],
-            });
+            writeContract(
+                {
+                    address: LegacyToken_Address,
+                    abi: LegacyToken_ABI,
+                    functionName: "transfer",
+                    args: [ChainLegacy_Address, parseEther(amount)],
+                },
+                {
+                    onError: (err: any) => toast.error(err?.message || "Deposit failed"),
+                    onSuccess: () => toast.success("Deposit successful!"),
+                }
+            );
         } catch (err) {
             console.error("Deposit error:", err);
         }
@@ -47,10 +50,10 @@ export default function DepositAssetsPage() {
 
             <button
                 onClick={handleDeposit}
-                disabled={isLoading}
+                disabled={isPending}
                 className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
             >
-                {isLoading ? "Depositing..." : "Deposit"}
+                {isPending ? "Depositing..." : "Deposit"}
             </button>
         </div>
     );

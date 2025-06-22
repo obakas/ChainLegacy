@@ -3,6 +3,7 @@ import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { FaGithub, FaYoutube } from "react-icons/fa";
 import Image from "next/image";
 import Link from 'next/link'
+import { useAccount } from "wagmi";
 
 interface HeaderProps {
     githubUrl?: string;
@@ -17,6 +18,7 @@ export default function Header({
     logoUrl,
     videoUrl = "https://youtu.be/cOxl-miweWI",
 }: HeaderProps) {
+    const { address, isConnected } = useAccount();
     return (
         <header className="w-full border-b border-gray-200 bg-white/50 backdrop-blur-sm px-4 py-3">
             <div className="mx-auto flex max-w-7xl items-center justify-between">
@@ -31,7 +33,10 @@ export default function Header({
                             className="h-8 w-auto"
                         />
                     ) : (
-                        <h1 className="text-xl font-bold text-gray-900">{appName}</h1>
+                        <Link href="/" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+                            {appName}
+                        </Link>
+
                     )}
 
                     <a
@@ -55,22 +60,22 @@ export default function Header({
                         <FaYoutube size={28} />
                     </a>
                 </div>
+                {isConnected && (
+                    <nav className="space-x-4">
+                        <Link href="/register" className="text-gray-700 font-bold hover:text-blue-600">Register</Link>
+                        <Link href="/deposit" className="text-gray-700 font-bold hover:text-blue-600">Deposit</Link>
+                        <Link href="/inheritor" className="text-gray-700 font-bold hover:text-blue-600">Inheritor</Link>
+                    </nav>
+                )}
 
-            <nav className="space-x-4">
-                <Link href="/register" className="text-gray-700 hover:text-blue-600">Register</Link>
-                <Link href="/dashboard" className="text-gray-700 hover:text-blue-600">Dashboard</Link>
-                <Link href="/deposit" className="text-gray-700 hover:text-blue-600">Deposit</Link>
-                <Link href="/inheritor" className="text-gray-700 hover:text-blue-600">Inheritor</Link>
-            </nav>
 
-
-            {/* Right side - Connect Button */}
-            <ConnectButton
-                showBalance={true}
-                accountStatus="address"
-                chainStatus="icon"
-            />
-        </div>
+                {/* Right side - Connect Button */}
+                <ConnectButton
+                    showBalance={true}
+                    accountStatus="address"
+                    chainStatus="icon"
+                />
+            </div>
         </header >
     );
 }

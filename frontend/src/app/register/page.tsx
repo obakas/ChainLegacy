@@ -3,7 +3,7 @@ import { useState } from 'react'
 import { useWriteContract, useAccount, useChainId, useWaitForTransactionReceipt, useReadContract, useConfig } from 'wagmi'
 import { parseEther } from 'viem'
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants'
-import toast from 'react-hot-toast'
+import toast, { Renderable, Toast, ValueFunction } from 'react-hot-toast'
 
 export default function RegisterPlanPage() {
     const { address } = useAccount()
@@ -12,32 +12,35 @@ export default function RegisterPlanPage() {
     const [percentages, setPercentages] = useState([''])
     const [timeout, setTimeout] = useState(30)
 
-    const { write } = useWriteContract({
-        address: ChainLegacy_Address,
-        abi: ChainLegacy_ABI,
-        functionName: 'registerPlan',
-        onSuccess() {
-            toast.success('Plan registered successfully!')
-        },
-        onError(err) {
-            toast.error(err.message)
-        }
-    })
+    const { writeContract } = useWriteContract()
 
     const handleSubmit = () => {
         const inheritorAddresses = inheritors.map((a) => a.trim())
         const birthYearNums = birthYears.map(Number)
         const percentNums = percentages.map(Number)
 
-        write({
-            args: [
-                inheritorAddresses,
-                birthYearNums,
-                percentNums,
-                BigInt(timeout * 86400), // convert days to seconds
-                [] // placeholder for tokens
-            ]
-        })
+        writeContract(
+            {
+                args: [
+                    inheritorAddresses,
+                    birthYearNums,
+                    percentNums,
+                    BigInt(timeout * 86400), // convert days to seconds
+                    [] // placeholder for tokens
+                ],
+                abi: ChainLegacy_ABI,
+                functionName: 'registerPlan',
+                address: ChainLegacy_Address
+            },
+            {
+                onSuccess() {
+                    toast.success('Plan registered successfully!')
+                },
+                onError(err: { message: Renderable | ValueFunction<Renderable, Toast> }) {
+                    toast.error(err.message)
+                }
+            }
+        )
     }
 
     const addInheritor = () => {
@@ -47,8 +50,6 @@ export default function RegisterPlanPage() {
     }
 
     if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;
-    if (isLoading) return <p className="text-center mt-12">Loading your plan...</p>;
-    if (!plan) return <p className="text-center mt-12">No plan found.</p>;
 
     return (
         <div className="max-w-xl mx-auto p-6">
