@@ -2,13 +2,17 @@
 import { useWriteContract, useAccount, useChainId, useWaitForTransactionReceipt, useReadContract, useConfig } from "wagmi";
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants'
 import toast, { Renderable, Toast, ValueFunction } from "react-hot-toast";
-import { useEffect } from "react";
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect } from "react";
 
 // console.log("📦 Dashboard component loaded");
 
 
 export default function Dashboard() {
     // console.log("Chain ID:", useChainId());
+    
+
+
+
     const { address } = useAccount();
 
     const {
@@ -21,6 +25,11 @@ export default function Dashboard() {
         functionName: "getPlan",
         args: [address!],
     });
+
+    console.log("Raw Plan Data:", planData);
+
+
+
 
     const { writeContract } = useWriteContract();
 
@@ -46,9 +55,9 @@ export default function Dashboard() {
     if (isError || !planData) return <p className="text-center mt-12">No plan found or failed to load.</p>;
 
     // 👇 LOG TO SEE WHAT IT REALLY RETURNS
-    console.log("Plan Data:", planData);
+    console.log("✅ Final Plan Data:", planData);
 
-    let inheritors = [];
+    let inheritorsRaw = [];
     let timeout = "N/A";
     let lastPing = "N/A";
 
@@ -56,7 +65,7 @@ export default function Dashboard() {
     try {
         // planData is either a tuple OR object
         if (Array.isArray(planData)) {
-            [inheritors, timeout, lastPing] = planData;
+            [inheritorsRaw, timeout, lastPing] = planData;
         } else if (
             planData &&
             typeof planData === "object" &&
@@ -64,7 +73,7 @@ export default function Dashboard() {
             "timeout" in planData &&
             "lastPing" in planData
         ) {
-            inheritors = (planData as { inheritors: any[] }).inheritors;
+            inheritorsRaw = (planData as { inheritors: any[] }).inheritors;
             timeout = (planData as { timeout: string }).timeout;
             lastPing = (planData as { lastPing: string }).lastPing;
         }
@@ -74,10 +83,11 @@ export default function Dashboard() {
 
     return (
         <div className="max-w-2xl mx-auto p-6">
+
             <h2 className="text-2xl font-bold mb-6">Your ChainLegacy Plan</h2>
 
-            <div className="bg-white shadow rounded p-4 space-y-2 mb-6">
-                <p><strong>Inheritor Count:</strong> {inheritors.length ?? "?"}</p>
+            <div className="bg-white shadow text-black rounded p-4 space-y-2 mb-6">
+                <p><strong>Inheritor Count:</strong> {inheritorsRaw.length ?? "?"}</p>
                 <p><strong>Timeout (seconds):</strong> {timeout?.toString()}</p>
                 <p><strong>Last Ping:</strong> {lastPing !== "N/A" ? new Date(Number(lastPing) * 1000).toLocaleString() : "N/A"}</p>
             </div>

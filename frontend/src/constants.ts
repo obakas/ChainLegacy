@@ -193,11 +193,6 @@ export const ChainLegacy_ABI = [
                     "name": "tokens",
                     "type": "address[]",
                     "internalType": "address[]"
-                },
-                {
-                    "name": "",
-                    "type": "address[]",
-                    "internalType": "address[]"
                 }
             ],
             "outputs": [],

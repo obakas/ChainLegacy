@@ -1,10 +1,12 @@
 'use client'
 import { useState } from 'react'
-import { useWriteContract, useAccount} from 'wagmi'
+import { useWriteContract, useAccount } from 'wagmi'
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants'
 import toast, { Renderable, Toast, ValueFunction } from 'react-hot-toast'
 
 export default function RegisterPlanPage() {
+
+
     const { address } = useAccount()
     const [inheritors, setInheritors] = useState([''])
     const [birthYears, setBirthYears] = useState([''])
@@ -13,27 +15,38 @@ export default function RegisterPlanPage() {
 
     const { writeContract } = useWriteContract()
 
+
+
+
+
+
     const handleSubmit = () => {
         const inheritorAddresses = inheritors.map((a) => a.trim())
         const birthYearNums = birthYears.map(Number)
         const percentNums = percentages.map(Number)
 
+        console.log("inheritorAddresses:", inheritorAddresses);
+        console.log("percentNums:", percentNums);
+        console.log("birthYearNums:", birthYearNums);
+        console.log("timeout:", timeout);
+
         writeContract(
             {
+                address: ChainLegacy_Address,
+                abi: ChainLegacy_ABI,
+                functionName: "registerPlan",
                 args: [
                     inheritorAddresses,
-                    birthYearNums,
                     percentNums,
-                    BigInt(timeout * 86400), // convert days to seconds
-                    [] // placeholder for tokens
-                ],
-                abi: ChainLegacy_ABI,
-                functionName: 'registerPlan',
-                address: ChainLegacy_Address
+                    birthYearNums,
+                    BigInt(timeout * 86400),
+                    [] // tokens
+                ]
             },
             {
                 onSuccess() {
                     toast.success('Plan registered successfully!')
+                    console.log("Plan registered, now fetching for confirmation...")
                 },
                 onError(err: { message: Renderable | ValueFunction<Renderable, Toast> }) {
                     toast.error(err.message)

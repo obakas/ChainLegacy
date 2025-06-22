@@ -65,10 +65,10 @@ contract ChainLegacyTest is Test {
         birthYears[1] = 2005;
         address[] memory tokens = new address[](1);
         tokens[0] = address(token);
-        address[] memory nfts = new address[](0);
+        // address[] memory nfts = new address[](0);
 
         vm.expectRevert("Mismatched arrays");
-        legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens, nfts);
+        legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
     }
 
     function testRegisterPlanPercentagesNot100() public {
@@ -83,10 +83,10 @@ contract ChainLegacyTest is Test {
         birthYears[1] = 2005;
         address[] memory tokens = new address[](1);
         tokens[0] = address(token);
-        address[] memory nfts = new address[](0);
+        // address[] memory nfts = new address[](0);
 
         vm.expectRevert("Percentages must sum to 100");
-        legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens, nfts);
+        legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
     }
 
     function testKeepAlivePreventsUpkeep() public {
@@ -98,9 +98,9 @@ contract ChainLegacyTest is Test {
         birthYears[0] = 2000;
         address[] memory tokens = new address[](1);
         tokens[0] = address(token);
-        address[] memory nfts = new address[](0);
+        // address[] memory nfts = new address[](0);
 
-        legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens, nfts);
+        legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
         vm.warp(block.timestamp + 12 hours);
         legacy.keepAlive();
         vm.warp(block.timestamp + 12 hours + 1);

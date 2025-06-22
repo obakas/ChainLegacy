@@ -31,8 +31,8 @@ contract ChainLegacy is AutomationCompatibleInterface {
         uint256[] calldata percentages,
         uint256[] calldata birthYears,
         uint256 timeout,
-        address[] calldata tokens,
-        address[] calldata /* nfts */
+        address[] calldata tokens
+        // address[] calldata nfts 
     ) external {
         require(
             inheritors.length == percentages.length &&
