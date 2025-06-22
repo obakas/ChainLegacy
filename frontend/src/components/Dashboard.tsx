@@ -1,25 +1,28 @@
 "use client";
 import { useWriteContract, useAccount, useChainId, useWaitForTransactionReceipt, useReadContract, useConfig } from "wagmi";
-import { ChainLegacy_ABI, ChainLegacy_Address } from "@/src/constants";
-import toast from "react-hot-toast";
+import { ChainLegacy_ABI, ChainLegacy_Address } from "@/constants";
+import toast, { Renderable, Toast, ValueFunction } from "react-hot-toast";
 
 export default function DashboardPage() {
     const { address } = useAccount();
 
-    const { data: plan, isLoading } = useReadContract({
-        address: ChainLegacy_Address,
-        abi: ChainLegacy_ABI,
-        functionName: "getPlan",
-        args: [address!],
-        enabled: !!address
-    });
+    const { data: plan, isLoading } = useReadContract(
+        address
+            ? {
+                address: ChainLegacy_Address,
+                abi: ChainLegacy_ABI,
+                functionName: "getPlan",
+                args: [address!],
+            }
+            : undefined
+    );
 
-    const { write: keepAlive } = useWriteContract({
-        address: ChainLegacy_Address,
-        abi: ChainLegacy_ABI,
+    const keepAlive = useWriteContract({
+        abiOrInterface: ChainLegacy_ABI,
+        addressOrName: ChainLegacy_Address,
         functionName: "keepAlive",
         onSuccess: () => toast.success("KeepAlive pinged!"),
-        onError: (err) => toast.error(err.message)
+        onError: (err: { message: Renderable | ValueFunction<Renderable, Toast>; }) => toast.error(err.message)
     });
 
     if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;

@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { useWriteContract, useAccount, useChainId, useWaitForTransactionReceipt, useReadContract, useConfig } from 'wagmi'
 import { parseEther } from 'viem'
-import { ChainLegacy_ABI, ChainLegacy_Address } from '@/src/constants'
+import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants'
 import toast from 'react-hot-toast'
 
 export default function RegisterPlanPage() {
@@ -45,6 +45,10 @@ export default function RegisterPlanPage() {
         setBirthYears([...birthYears, ''])
         setPercentages([...percentages, ''])
     }
+
+    if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;
+    if (isLoading) return <p className="text-center mt-12">Loading your plan...</p>;
+    if (!plan) return <p className="text-center mt-12">No plan found.</p>;
 
     return (
         <div className="max-w-xl mx-auto p-6">

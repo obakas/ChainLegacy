@@ -2,6 +2,7 @@
 import { ConnectButton } from "@rainbow-me/rainbowkit";
 import { FaGithub, FaYoutube } from "react-icons/fa";
 import Image from "next/image";
+import Link from 'next/link'
 
 interface HeaderProps {
     githubUrl?: string;
@@ -55,13 +56,21 @@ export default function Header({
                     </a>
                 </div>
 
-                {/* Right side - Connect Button */}
-                <ConnectButton
-                    showBalance={true}
-                    accountStatus="address"
-                    chainStatus="icon"
-                />
-            </div>
-        </header>
+            <nav className="space-x-4">
+                <Link href="/register" className="text-gray-700 hover:text-blue-600">Register</Link>
+                <Link href="/dashboard" className="text-gray-700 hover:text-blue-600">Dashboard</Link>
+                <Link href="/deposit" className="text-gray-700 hover:text-blue-600">Deposit</Link>
+                <Link href="/inheritor" className="text-gray-700 hover:text-blue-600">Inheritor</Link>
+            </nav>
+
+
+            {/* Right side - Connect Button */}
+            <ConnectButton
+                showBalance={true}
+                accountStatus="address"
+                chainStatus="icon"
+            />
+        </div>
+        </header >
     );
 }
