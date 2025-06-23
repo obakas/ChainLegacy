@@ -118,6 +118,25 @@ export const ChainLegacy_ABI = [
         },
         {
             "type": "function",
+            "name": "getUnallocatedPercent",
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
             "name": "keepAlive",
             "inputs": [],
             "outputs": [],
@@ -161,9 +180,32 @@ export const ChainLegacy_ABI = [
                     "name": "active",
                     "type": "bool",
                     "internalType": "bool"
+                },
+                {
+                    "name": "totalAssignedPercent",
+                    "type": "uint256",
+                    "internalType": "uint256"
                 }
             ],
             "stateMutability": "view"
+        },
+        {
+            "type": "function",
+            "name": "registerInheritor",
+            "inputs": [
+                {
+                    "name": "inheritor",
+                    "type": "address",
+                    "internalType": "address"
+                },
+                {
+                    "name": "percent",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
         },
         {
             "type": "function",
@@ -197,6 +239,38 @@ export const ChainLegacy_ABI = [
             ],
             "outputs": [],
             "stateMutability": "nonpayable"
+        },
+        {
+            "type": "function",
+            "name": "removeInheritor",
+            "inputs": [
+                {
+                    "name": "inheritor",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+        },
+        {
+            "type": "event",
+            "name": "InheritanceExecuted",
+            "inputs": [
+                {
+                    "name": "planOwner",
+                    "type": "address",
+                    "indexed": true,
+                    "internalType": "address"
+                },
+                {
+                    "name": "timestamp",
+                    "type": "uint256",
+                    "indexed": false,
+                    "internalType": "uint256"
+                }
+            ],
+            "anonymous": false
         }
     ];
 

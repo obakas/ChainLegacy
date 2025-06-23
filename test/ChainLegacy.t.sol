@@ -29,22 +29,20 @@ contract ChainLegacyTest is Test {
     //     percentages[0] = 60;
     //     percentages[1] = 40;
     //     uint256[] memory birthYears = new uint256[](2);
-    //     birthYears[0] = 1952;
+    //     birthYears[0] = 1952; // unlock now
     //     birthYears[1] = 1952;
     //     address[] memory tokens = new address[](1);
     //     tokens[0] = address(token);
-    //     address[] memory nfts = new address[](0);
 
-    //     legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens, nfts);
+    //     legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
+
     //     (bool upkeepNeeded1, ) = legacy.checkUpkeep(abi.encode(owner));
     //     assertFalse(upkeepNeeded1, "Upkeep should not be needed yet");
 
-    //     // Simulate time passing
     //     vm.warp(block.timestamp + 2 days);
     //     (bool upkeepNeeded2, ) = legacy.checkUpkeep(abi.encode(owner));
     //     assertTrue(upkeepNeeded2, "Upkeep should be needed after timeout");
 
-    //     // Run upkeep
     //     uint256 bal1Before = token.balanceOf(inheritor1);
     //     uint256 bal2Before = token.balanceOf(inheritor2);
     //     legacy.performUpkeep(abi.encode(owner));
@@ -54,6 +52,28 @@ contract ChainLegacyTest is Test {
     //     assertEq(bal2After - bal2Before, 400 ether, "Inheritor2 should get 40%");
     // }
 
+    // function testRegisterInheritorAndRemove() public {
+    //     legacy.registerPlan(new address[](0), new uint256[](0), new uint256[](0), 1 days, new address[](0));
+    //     assertEq(legacy.getUnallocatedPercent(owner), 100);
+
+    //     legacy.registerInheritor(inheritor1, 40);
+    //     assertEq(legacy.getUnallocatedPercent(owner), 60);
+
+    //     legacy.registerInheritor(inheritor2, 60);
+    //     assertEq(legacy.getUnallocatedPercent(owner), 0);
+
+    //     vm.expectRevert("Exceeds 100% allocation");
+    //     legacy.registerInheritor(inheritor3, 1);
+
+    //     vm.expectRevert("Already registered");
+    //     legacy.registerInheritor(inheritor1, 10);
+
+    //     // Remove inheritor1
+    //     vm.prank(owner);
+    //     legacy.removeInheritor(inheritor1);
+    //     assertEq(legacy.getUnallocatedPercent(owner), 40);
+    // }
+
     function testRegisterPlanMismatchedArrays() public {
         address[] memory inheritors = new address[](2);
         inheritors[0] = inheritor1;
@@ -61,11 +81,10 @@ contract ChainLegacyTest is Test {
         uint256[] memory percentages = new uint256[](1);
         percentages[0] = 100;
         uint256[] memory birthYears = new uint256[](2);
-        birthYears[0] = 2000;
-        birthYears[1] = 2005;
+        birthYears[0] = 1952;
+        birthYears[1] = 1952;
         address[] memory tokens = new address[](1);
         tokens[0] = address(token);
-        // address[] memory nfts = new address[](0);
 
         vm.expectRevert("Mismatched arrays");
         legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
@@ -79,11 +98,10 @@ contract ChainLegacyTest is Test {
         percentages[0] = 70;
         percentages[1] = 20;
         uint256[] memory birthYears = new uint256[](2);
-        birthYears[0] = 2000;
-        birthYears[1] = 2005;
+        birthYears[0] = 1952;
+        birthYears[1] = 1952;
         address[] memory tokens = new address[](1);
         tokens[0] = address(token);
-        // address[] memory nfts = new address[](0);
 
         vm.expectRevert("Percentages must sum to 100");
         legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
@@ -95,10 +113,9 @@ contract ChainLegacyTest is Test {
         uint256[] memory percentages = new uint256[](1);
         percentages[0] = 100;
         uint256[] memory birthYears = new uint256[](1);
-        birthYears[0] = 2000;
+        birthYears[0] = 1952;
         address[] memory tokens = new address[](1);
         tokens[0] = address(token);
-        // address[] memory nfts = new address[](0);
 
         legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
         vm.warp(block.timestamp + 12 hours);

@@ -1,9 +1,11 @@
 "use client";
 
-import { readContract } from '@wagmi/core';
+import { readContract, writeContract, waitForTransactionReceipt } from '@wagmi/core';
 import { useEffect, useState } from 'react';
-import { useAccount, useChainId, useConfig } from 'wagmi';
+import { useAccount, useChainId, useConfig, useWatchContractEvent } from 'wagmi';
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants';
+import toast from 'react-hot-toast';
+import { useUnallocatedPercent } from '@/hooks/usePlan';
 
 export default function Dashboard() {
   const { address } = useAccount();
@@ -13,7 +15,36 @@ export default function Dashboard() {
   const [planData, setPlanData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+
   const [inheritorsRaw, tokens, timeout, lastPing, active] = planData || [];
+
+  const { data: unallocatedPercent, isLoading: isLoadingUnallocated } = useUnallocatedPercent();
+
+
+
+  useWatchContractEvent({
+    address: ChainLegacy_Address,
+    abi: ChainLegacy_ABI,
+    eventName: 'InheritanceExecuted',
+    listener(logs) {
+      logs.forEach((log: any) => {
+        const planOwner = log.args?.planOwner;
+        const timestamp = log.args?.timestamp;
+
+        if (address?.toLowerCase() === planOwner?.toLowerCase()) {
+          toast.success(
+            `✅ Inheritance executed at ${new Date(Number(timestamp) * 1000).toLocaleTimeString()}`
+          );
+          window.location.reload();
+        }
+      });
+    },
+  });
+
+
+
+
+
 
   useEffect(() => {
     const fetchPlan = async () => {
@@ -42,18 +73,32 @@ export default function Dashboard() {
     fetchPlan();
   }, [address, config, chainId]);
 
-  console.log("🧠 Parsed Inheritors:", inheritorsRaw);
+  // Handle Remove Inheritor
+  const handleRemoveInheritor = async (inheritor: string) => {
+    try {
+      const tx = await writeContract(config, {
+        address: ChainLegacy_Address,
+        abi: ChainLegacy_ABI,
+        functionName: "removeInheritor",
+        args: [inheritor],
+      });
 
+      await waitForTransactionReceipt(config, { hash: tx });
+      toast.success("Inheritor removed successfully!");
+      window.location.reload(); // temporary brute-force refresh
+    } catch (err: any) {
+      console.error("Error removing inheritor:", err);
+      toast.error(err?.message || "Failed to remove inheritor.");
+    }
+  };
 
+  // UI Guards
   if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;
-if (loading) return <p className="text-center mt-12">Loading your plan...</p>;
-if (error) return <p className="text-center mt-12">Failed to load your plan.</p>;
-if (!planData || !Array.isArray(planData) || planData.length === 0) {
-  return <p className="text-center mt-12">No plan data found.</p>;
-}
-
-
- 
+  if (loading) return <p className="text-center mt-12">Loading your plan...</p>;
+  if (error) return <p className="text-center mt-12">Failed to load your plan.</p>;
+  if (!planData || !Array.isArray(planData) || planData.length === 0) {
+    return <p className="text-center mt-12">No plan data found.</p>;
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6">
@@ -67,133 +112,50 @@ if (!planData || !Array.isArray(planData) || planData.length === 0) {
       </div>
 
       {inheritorsRaw.length > 0 ? (
-  <ul className="list-disc list-inside space-y-1">
-    {inheritorsRaw.map((i: any, idx: number) => (
-      <li key={idx}>
-        <strong>{i.inheritor}</strong> — {i.percent}% — Unlocks on{" "}
-        {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
-      </li>
-    ))}
-  </ul>
-) : (
-  <p>No inheritors registered yet.</p>
-)}
+        <ul className="list-disc list-inside space-y-2">
+          {inheritorsRaw.map((i: any, idx: number) => (
+            <li key={idx} className="flex justify-between items-center bg-gray-800 rounded p-2">
+              <div>
+                <strong>{i.inheritor}</strong> — {i.percent}% — Unlocks on{" "}
+                {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
+              </div>
+              <button
+                onClick={() => handleRemoveInheritor(i.inheritor)}
+                className="ml-4 px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Remove
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No inheritors registered yet.</p>
+      )}
 
+      <button
+        onClick={async () => {
+          try {
+            const tx = await writeContract(config, {
+              address: ChainLegacy_Address,
+              abi: ChainLegacy_ABI,
+              functionName: "keepAlive",
+            });
+            await waitForTransactionReceipt(config, { hash: tx });
+            toast.success("KeepAlive pinged successfully!");
+          } catch (err: any) {
+            toast.error(err?.message || "Failed to ping KeepAlive.");
+          }
+        }}
+        className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 mt-6"
+      >
+        Ping KeepAlive
+      </button>
+
+      {!isLoadingUnallocated && unallocatedPercent !== undefined && (
+        <p className="text-sm text-gray-400 mt-4">
+          🧮 Remaining unassigned: <span className="font-bold">{unallocatedPercent?.toString() ?? "0"}%</span>
+        </p>
+      )}
     </div>
   );
 }
-
-// "use client";
-// import { useWriteContract, useAccount, useChainId, useWaitForTransactionReceipt, useReadContract, useConfig } from "wagmi";
-// import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants'
-// import toast, { Renderable, Toast, ValueFunction } from "react-hot-toast";
-// import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect } from "react";
-
-// // console.log("📦 Dashboard component loaded");
-
-
-// export default function Dashboard() {
-//     // console.log("Chain ID:", useChainId());
-    
-
-
-
-//     const { address } = useAccount();
-
-//     const {
-//         data: planData,
-//         isLoading,
-//         isError,
-//     } = useReadContract({
-//         address: ChainLegacy_Address,
-//         abi: ChainLegacy_ABI,
-//         functionName: "getPlan",
-//         args: [address!],
-//     });
-
-//     console.log("Raw Plan Data:", planData);
-
-
-
-
-//     const { writeContract } = useWriteContract();
-
-
-//     // const { writeContract } = useWriteContract({
-//     //     address: ChainLegacy_Address,//error 1:Object literal may only specify known properties, and 'address' does not exist in type 'UseWriteContractParameters<Config, unknown>'
-//     //     abi: ChainLegacy_ABI,
-//     //     functionName: "keepAlive",
-//     //     onSuccess: () => toast.success("KeepAlive pinged successfully!"),
-//     //     onError: (err: { message: Renderable | ValueFunction<Renderable, Toast>; }) => toast.error(err.message),
-//     // });
-
-//     useEffect(() => {
-//         console.log("Address:", address);
-//         console.log("PlanData:", planData);
-//         console.log("Loading:", isLoading);
-//         console.log("Error:", isError);
-//     }, [address, planData, isLoading, isError]);
-
-
-//     if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;
-//     if (isLoading) return <p className="text-center mt-12">Loading your plan...</p>;
-//     if (isError || !planData) return <p className="text-center mt-12">No plan found or failed to load.</p>;
-
-//     // 👇 LOG TO SEE WHAT IT REALLY RETURNS
-//     console.log("✅ Final Plan Data:", planData);
-
-//     let inheritorsRaw = [];
-//     let timeout = "N/A";
-//     let lastPing = "N/A";
-
-//     // 💡 Defensive destructuring
-//     try {
-//         // planData is either a tuple OR object
-//         if (Array.isArray(planData)) {
-//             [inheritorsRaw, timeout, lastPing] = planData;
-//         } else if (
-//             planData &&
-//             typeof planData === "object" &&
-//             "inheritors" in planData &&
-//             "timeout" in planData &&
-//             "lastPing" in planData
-//         ) {
-//             inheritorsRaw = (planData as { inheritors: any[] }).inheritors;
-//             timeout = (planData as { timeout: string }).timeout;
-//             lastPing = (planData as { lastPing: string }).lastPing;
-//         }
-//     } catch (e) {
-//         console.error("Error parsing planData", e);
-//     }
-
-//     return (
-//         <div className="max-w-2xl mx-auto p-6">
-
-//             <h2 className="text-2xl font-bold mb-6">Your ChainLegacy Plan</h2>
-
-//             <div className="bg-white shadow text-black rounded p-4 space-y-2 mb-6">
-//                 <p><strong>Inheritor Count:</strong> {inheritorsRaw.length ?? "?"}</p>
-//                 <p><strong>Timeout (seconds):</strong> {timeout?.toString()}</p>
-//                 <p><strong>Last Ping:</strong> {lastPing !== "N/A" ? new Date(Number(lastPing) * 1000).toLocaleString() : "N/A"}</p>
-//             </div>
-
-//             <button
-//                 onClick={() => {
-//                     try {
-//                         writeContract({
-//                             address: ChainLegacy_Address,
-//                             abi: ChainLegacy_ABI,
-//                             functionName: "keepAlive",
-//                         });
-//                         toast.success("KeepAlive pinged successfully!");
-//                     } catch (err: any) {
-//                         toast.error(err?.message || "Failed to ping KeepAlive.");
-//                     }
-//                 }}
-//                 className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700"
-//             >
-//                 Ping KeepAlive
-//             </button>
-//         </div>
-//     );
-// }

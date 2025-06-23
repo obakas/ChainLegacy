@@ -2,6 +2,7 @@
 import { useEffect, useState } from "react";
 import { useAccount, useBalance } from "wagmi";
 import { LegacyToken_Address } from "@/constants";
+import { useRemoveInheritor } from '@/hooks/useRemoveInheritor'
 
 const BIRTH_YEAR = 2015; // Replace with dynamic value if possible
 const UNLOCK_AGE = 18;
@@ -23,6 +24,11 @@ export default function InheritorPage() {
         setAge(calculatedAge);
         setIsUnlocked(calculatedAge >= UNLOCK_AGE);
     }, []);
+
+    // Dummy plan object for demonstration; replace with real data as needed
+    const plan = {
+        inheritors: [] as string[], // Example: ['0x123...', '0x456...']
+    };
 
     return (
         <div className="max-w-md mx-auto p-6">
@@ -48,6 +54,18 @@ export default function InheritorPage() {
                     )}
                 </>
             )}
+
+            {plan.inheritors.map((addr: string, index: number) => (
+                <div key={addr} className="flex justify-between items-center p-2 border-b border-gray-700">
+                    <span className="text-white">{addr}</span>
+                    <button
+                        onClick={() => useRemoveInheritor({ args: [addr] })}
+                        className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition"
+                    >
+                        Remove
+                    </button>
+                </div>
+            ))}
         </div>
     );
 }
