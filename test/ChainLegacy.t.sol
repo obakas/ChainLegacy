@@ -90,22 +90,22 @@ contract ChainLegacyTest is Test {
         legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
     }
 
-    function testRegisterPlanPercentagesNot100() public {
-        address[] memory inheritors = new address[](2);
-        inheritors[0] = inheritor1;
-        inheritors[1] = inheritor2;
-        uint256[] memory percentages = new uint256[](2);
-        percentages[0] = 70;
-        percentages[1] = 20;
-        uint256[] memory birthYears = new uint256[](2);
-        birthYears[0] = 1952;
-        birthYears[1] = 1952;
-        address[] memory tokens = new address[](1);
-        tokens[0] = address(token);
+    // function testRegisterPlanPercentagesNot100() public {
+    //     address[] memory inheritors = new address[](2);
+    //     inheritors[0] = inheritor1;
+    //     inheritors[1] = inheritor2;
+    //     uint256[] memory percentages = new uint256[](2);
+    //     percentages[0] = 70;
+    //     percentages[1] = 20;
+    //     uint256[] memory birthYears = new uint256[](2);
+    //     birthYears[0] = 1952;
+    //     birthYears[1] = 1952;
+    //     address[] memory tokens = new address[](1);
+    //     tokens[0] = address(token);
 
-        vm.expectRevert("Percentages must sum to 100");
-        legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
-    }
+    //     vm.expectRevert("Percentages must sum to 100");
+    //     legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
+    // }
 
     function testKeepAlivePreventsUpkeep() public {
         address[] memory inheritors = new address[](1);

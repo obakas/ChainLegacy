@@ -44,7 +44,7 @@ contract ChainLegacy is AutomationCompatibleInterface {
         require(inheritors.length > 0, "No inheritors");
 
         uint256 total;
-        delete plans[msg.sender].inheritors;
+        // delete plans[msg.sender].inheritors;
         for (uint256 i = 0; i < inheritors.length; i++) {
             total += percentages[i];
             uint256 unlockTime = block.timestamp +
@@ -57,7 +57,7 @@ contract ChainLegacy is AutomationCompatibleInterface {
                 })
             );
         }
-        require(total == 100, "Percentages must sum to 100");
+        require(total <= 100, "Percentages cannot exceed 100");
 
         plans[msg.sender].tokens = tokens;
         plans[msg.sender].timeout = timeout;
@@ -65,6 +65,8 @@ contract ChainLegacy is AutomationCompatibleInterface {
         plans[msg.sender].active = true;
         plans[msg.sender].totalAssignedPercent = total;
     }
+
+
     function keepAlive() external onlyActive(msg.sender) {
         plans[msg.sender].lastPing = block.timestamp;
     }
@@ -123,6 +125,12 @@ contract ChainLegacy is AutomationCompatibleInterface {
 
     function getUnallocatedPercent(address user) public view returns (uint256) {
         return 100 - plans[user].totalAssignedPercent;
+    }
+
+    function getAssignedPercent(
+        address user
+    ) public view returns (uint256) {
+        return plans[user].totalAssignedPercent;
     }
 
     function checkUpkeep(

@@ -1,28 +1,30 @@
+// app/dashboard.tsx
 "use client";
 
-import { readContract, writeContract, waitForTransactionReceipt } from '@wagmi/core';
-import { useEffect, useState } from 'react';
-import { useAccount, useChainId, useConfig, useWatchContractEvent } from 'wagmi';
+import { writeContract, waitForTransactionReceipt, watchContractEvent } from '@wagmi/core';
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect } from 'react';
+import { useAccount, useChainId, useConfig } from 'wagmi';
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants';
 import toast from 'react-hot-toast';
-import { useUnallocatedPercent } from '@/hooks/usePlan';
+import {   usePlan, useAllocatedPercent, useUnallocatedPercent } from '@/hooks/usePlan';
 
 export default function Dashboard() {
   const { address } = useAccount();
   const chainId = useChainId();
   const config = useConfig();
 
-  const [planData, setPlanData] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(false);
+  const { data: plan, loading, error } = usePlan();
 
-  const [inheritorsRaw, tokens, timeout, lastPing, active] = planData || [];
+  const allocatedPercent = plan?.totalAssignedPercent ?? 0;
+  const unallocatedPercent = 100 - allocatedPercent;
 
-  const { data: unallocatedPercent, isLoading: isLoadingUnallocated } = useUnallocatedPercent();
+  const getWarningColor = () => {
+    if (unallocatedPercent === 100) return "bg-red-100 border-red-500 text-red-700";
+    if (unallocatedPercent >= 50) return "bg-orange-100 border-orange-500 text-orange-700";
+    return "bg-yellow-100 border-yellow-500 text-yellow-700";
+  };
 
-
-
-  useWatchContractEvent({
+  watchContractEvent(config, {
     address: ChainLegacy_Address,
     abi: ChainLegacy_ABI,
     eventName: 'InheritanceExecuted',
@@ -41,39 +43,6 @@ export default function Dashboard() {
     },
   });
 
-
-
-
-
-
-  useEffect(() => {
-    const fetchPlan = async () => {
-      if (!address) return;
-
-      try {
-        setLoading(true);
-        const data = await readContract(config, {
-          address: ChainLegacy_Address,
-          abi: ChainLegacy_ABI,
-          functionName: 'getPlan',
-          args: [address],
-          chainId
-        });
-
-        console.log("✅ Raw Plan Data from readContract:", data);
-        setPlanData(data);
-      } catch (err) {
-        console.error("❌ Failed to fetch plan:", err);
-        setError(true);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchPlan();
-  }, [address, config, chainId]);
-
-  // Handle Remove Inheritor
   const handleRemoveInheritor = async (inheritor: string) => {
     try {
       const tx = await writeContract(config, {
@@ -85,42 +54,44 @@ export default function Dashboard() {
 
       await waitForTransactionReceipt(config, { hash: tx });
       toast.success("Inheritor removed successfully!");
-      window.location.reload(); // temporary brute-force refresh
+      window.location.reload();
     } catch (err: any) {
       console.error("Error removing inheritor:", err);
       toast.error(err?.message || "Failed to remove inheritor.");
     }
   };
 
-  // UI Guards
   if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;
   if (loading) return <p className="text-center mt-12">Loading your plan...</p>;
   if (error) return <p className="text-center mt-12">Failed to load your plan.</p>;
-  if (!planData || !Array.isArray(planData) || planData.length === 0) {
-    return <p className="text-center mt-12">No plan data found.</p>;
-  }
+  if (!plan) return <p className="text-center mt-12">No plan data found.</p>;
 
   return (
     <div className="max-w-2xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6">Your ChainLegacy Plan</h2>
 
       <div className="bg-white shadow text-black rounded p-4 space-y-2 mb-6">
-        <p><strong>Inheritor Count:</strong> {inheritorsRaw.length}</p>
-        <p><strong>Timeout (seconds):</strong> {timeout.toString()}</p>
-        <p><strong>Last Ping:</strong> {lastPing !== BigInt(0) ? new Date(Number(lastPing) * 1000).toLocaleString() : "N/A"}</p>
-        <p><strong>Plan Active:</strong> {active ? "Yes" : "No"}</p>
+        <p><strong>Inheritor Count:</strong> {plan.inheritors.length}</p>
+        <p><strong>Timeout (seconds):</strong> {plan.timeout.toString()}</p>
+        <p><strong>Last Ping:</strong> {plan.lastPing !== BigInt(0) ? new Date(Number(plan.lastPing) * 1000).toLocaleString() : "N/A"}</p>
+        <p><strong>Plan Active:</strong> {plan.active ? "Yes" : "No"}</p>
       </div>
 
-      {inheritorsRaw.length > 0 ? (
+      {plan.inheritors.length > 0 ? (
         <ul className="list-disc list-inside space-y-2">
-          {inheritorsRaw.map((i: any, idx: number) => (
+          {plan.inheritors.map((i: { inheritor: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; percent: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; unlockTimestamp: any; }, idx: Key | null | undefined) => (
             <li key={idx} className="flex justify-between items-center bg-gray-800 rounded p-2">
               <div>
-                <strong>{i.inheritor}</strong> — {i.percent}% — Unlocks on{" "}
-                {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
+                <strong>{i.inheritor}</strong> — {i.percent}% — Unlocks on {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
               </div>
               <button
-                onClick={() => handleRemoveInheritor(i.inheritor)}
+                onClick={() => {
+                  if (typeof i.inheritor === "string") {
+                    handleRemoveInheritor(i.inheritor);
+                  } else {
+                    toast.error("Invalid inheritor address.");
+                  }
+                }}
                 className="ml-4 px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
               >
                 Remove
@@ -151,10 +122,14 @@ export default function Dashboard() {
         Ping KeepAlive
       </button>
 
-      {!isLoadingUnallocated && unallocatedPercent !== undefined && (
-        <p className="text-sm text-gray-400 mt-4">
-          🧮 Remaining unassigned: <span className="font-bold">{unallocatedPercent?.toString() ?? "0"}%</span>
-        </p>
+      {unallocatedPercent > 0 && (
+        <div className={`${getWarningColor()} border-l-4 p-4 rounded-xl my-4`}>
+          <p className="font-bold">Warning</p>
+          <p>
+            You’ve only assigned {allocatedPercent}% of your inheritance.
+            The remaining {unallocatedPercent}% will be refunded to you if your plan is executed.
+          </p>
+        </div>
       )}
     </div>
   );

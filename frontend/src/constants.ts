@@ -28,6 +28,25 @@ export const ChainLegacy_ABI = [
         },
         {
             "type": "function",
+            "name": "getAssignedPercent",
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
             "name": "getPlan",
             "inputs": [
                 {
