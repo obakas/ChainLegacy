@@ -58,9 +58,19 @@ export const ChainLegacy_ABI = [
             "outputs": [
                 {
                     "name": "",
+                    "type": "string[]",
+                    "internalType": "string[]"
+                },
+                {
+                    "name": "",
                     "type": "tuple[]",
                     "internalType": "struct ChainLegacy.InheritorInfo[]",
                     "components": [
+                        {
+                            "name": "name",
+                            "type": "string",
+                            "internalType": "string"
+                        },
                         {
                             "name": "inheritor",
                             "type": "address",
@@ -112,6 +122,11 @@ export const ChainLegacy_ABI = [
                 }
             ],
             "outputs": [
+                {
+                    "name": "nameCount",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                },
                 {
                     "name": "inheritorCount",
                     "type": "uint256",
@@ -221,6 +236,11 @@ export const ChainLegacy_ABI = [
                     "name": "percent",
                     "type": "uint256",
                     "internalType": "uint256"
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "internalType": "string"
                 }
             ],
             "outputs": [],
@@ -230,6 +250,11 @@ export const ChainLegacy_ABI = [
             "type": "function",
             "name": "registerPlan",
             "inputs": [
+                {
+                    "name": "names",
+                    "type": "string[]",
+                    "internalType": "string[]"
+                },
                 {
                     "name": "inheritors",
                     "type": "address[]",
@@ -267,6 +292,11 @@ export const ChainLegacy_ABI = [
                     "name": "inheritor",
                     "type": "address",
                     "internalType": "address"
+                },
+                {
+                    "name": "name",
+                    "type": "string",
+                    "internalType": "string"
                 }
             ],
             "outputs": [],

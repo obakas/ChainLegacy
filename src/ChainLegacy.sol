@@ -7,12 +7,14 @@ import "lib/chainlink-brownie-contracts/contracts/src/v0.8/automation/interfaces
 contract ChainLegacy is AutomationCompatibleInterface {
     event InheritanceExecuted(address indexed planOwner, uint256 timestamp);
     struct InheritorInfo {
+        string name;
         address inheritor;
         uint256 percent; // out of 100
-        uint256 unlockTimestamp; // when this inheritor is eligible (e.g. turns 18)
+        uint256 unlockTimestamp; // when this inheritor is eligible (e.g. turns 18)   
     }
 
     struct LegacyPlan {
+        string[] names;
         InheritorInfo[] inheritors;
         address[] tokens;
         uint256 timeout;
@@ -30,6 +32,7 @@ contract ChainLegacy is AutomationCompatibleInterface {
 
     
     function registerPlan(
+        string[] calldata names,
         address[] calldata inheritors,
         uint256[] calldata percentages,
         uint256[] calldata birthYears,
@@ -38,19 +41,21 @@ contract ChainLegacy is AutomationCompatibleInterface {
     ) external {
         require(
             inheritors.length == percentages.length &&
-                inheritors.length == birthYears.length,
+                inheritors.length == birthYears.length
+                && inheritors.length == names.length,
             "Mismatched arrays"
         );
         require(inheritors.length > 0, "No inheritors");
 
         uint256 total;
-        // delete plans[msg.sender].inheritors;
+        delete plans[msg.sender].inheritors;
         for (uint256 i = 0; i < inheritors.length; i++) {
             total += percentages[i];
             uint256 unlockTime = block.timestamp +
                 ((birthYears[i] + 18 - 1970) * 365 days);
             plans[msg.sender].inheritors.push(
                 InheritorInfo({
+                    name: names[i],
                     inheritor: inheritors[i],
                     percent: percentages[i],
                     unlockTimestamp: unlockTime
@@ -72,7 +77,9 @@ contract ChainLegacy is AutomationCompatibleInterface {
     }
 
 
-    function registerInheritor(address inheritor, uint256 percent) external {
+    function registerInheritor(address inheritor, uint256 percent,
+    string calldata name
+    ) external {
         LegacyPlan storage plan = plans[msg.sender];
 
         require(inheritor != address(0), "Invalid address");
@@ -90,38 +97,73 @@ contract ChainLegacy is AutomationCompatibleInterface {
 
         plan.inheritors.push(
             InheritorInfo({
+                name: name,
                 inheritor: inheritor,
                 percent: percent,
                 unlockTimestamp: block.timestamp // or set as needed
+                
             })
         );
         plan.totalAssignedPercent += percent;
     }
 
-    function removeInheritor(address inheritor) external {
-        LegacyPlan storage plan = plans[msg.sender];
-        bool found = false;
-        uint256 percent = 0;
-        uint256 index = 0;
 
-        for (uint256 i = 0; i < plan.inheritors.length; i++) {
-            if (plan.inheritors[i].inheritor == inheritor) {
-                found = true;
-                percent = plan.inheritors[i].percent;
-                index = i;
-                break;
-            }
+
+    function removeInheritor(address inheritor, string memory name) external {
+    LegacyPlan storage plan = plans[msg.sender];
+    bool found = false;
+    uint256 percent = 0;
+    uint256 index = 0;
+
+    for (uint256 i = 0; i < plan.inheritors.length; i++) {
+        if (
+            plan.inheritors[i].inheritor == inheritor &&
+            keccak256(abi.encodePacked(plan.inheritors[i].name)) == keccak256(abi.encodePacked(name))
+        ) {
+            found = true;
+            percent = plan.inheritors[i].percent;
+            index = i;
+            break;
         }
-
-        require(found, "Inheritor not found");
-
-        // Subtract percent
-        plan.totalAssignedPercent -= percent;
-
-        // Remove from array
-        plan.inheritors[index] = plan.inheritors[plan.inheritors.length - 1];
-        plan.inheritors.pop();
     }
+
+    require(found, "Inheritor not found");
+
+    // Remove inheritor
+    for (uint256 i = index; i < plan.inheritors.length - 1; i++) {
+        plan.inheritors[i] = plan.inheritors[i + 1];
+    }
+    plan.inheritors.pop();
+
+    // plan.allocatedPercent -= percent;
+}
+
+
+    // function removeInheritor(address inheritor, string memory name) external {
+    //     LegacyPlan storage plan = plans[msg.sender];
+    //     bool found = false;
+    //     uint256 percent = 0;
+    //     uint256 index = 0;
+
+    //     for (uint256 i = 0; i < plan.inheritors.length; i++) {
+    //         if (plan.inheritors[i].inheritor == inheritor) {
+    //             found = true;
+    //             percent = plan.inheritors[i].percent;
+    //             index = i;
+    //             break;
+    //         }
+    //     }
+
+    //     require(found, "Inheritor not found");
+
+    //     // Subtract percent
+    //     plan.totalAssignedPercent -= percent;
+
+    //     // Remove from array
+    //     plan.inheritors[index] = plan.inheritors[plan.inheritors.length - 1];
+    //     plan.inheritors.pop();
+    // }
+
 
     function getUnallocatedPercent(address user) public view returns (uint256) {
         return 100 - plans[user].totalAssignedPercent;
@@ -180,6 +222,7 @@ contract ChainLegacy is AutomationCompatibleInterface {
         external
         view
         returns (
+            string[] memory,
             InheritorInfo[] memory,
             address[] memory,
             uint256,
@@ -189,6 +232,7 @@ contract ChainLegacy is AutomationCompatibleInterface {
     {
         LegacyPlan storage plan = plans[user];
         return (
+            plan.names,
             plan.inheritors,
             plan.tokens,
             plan.timeout,
@@ -203,6 +247,7 @@ contract ChainLegacy is AutomationCompatibleInterface {
         external
         view
         returns (
+            uint256 nameCount,
             uint256 inheritorCount,
             uint256 timeout,
             uint256 lastPing,
@@ -211,6 +256,7 @@ contract ChainLegacy is AutomationCompatibleInterface {
     {
         LegacyPlan storage plan = plans[user];
         return (
+            plan.names.length,
             plan.inheritors.length,
             plan.timeout,
             plan.lastPing,

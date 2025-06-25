@@ -6,8 +6,9 @@ import toast, { Renderable, Toast, ValueFunction } from 'react-hot-toast'
 
 export default function RegisterPlanPage() {
 
-
+    
     const { address } = useAccount()
+    const [names, setNames] = useState([''])
     const [inheritors, setInheritors] = useState([''])
     const [birthYears, setBirthYears] = useState([''])
     const [percentages, setPercentages] = useState([''])
@@ -21,10 +22,12 @@ export default function RegisterPlanPage() {
 
 
     const handleSubmit = () => {
+        const nameOfPersons = names.map((a) => a.trim())
         const inheritorAddresses = inheritors.map((a) => a.trim())
         const birthYearNums = birthYears.map(Number)
         const percentNums = percentages.map(Number)
 
+        console.log("names:", names);
         console.log("inheritorAddresses:", inheritorAddresses);
         console.log("percentNums:", percentNums);
         console.log("birthYearNums:", birthYearNums);
@@ -36,6 +39,7 @@ export default function RegisterPlanPage() {
                 abi: ChainLegacy_ABI,
                 functionName: "registerPlan",
                 args: [
+                    nameOfPersons,
                     inheritorAddresses,
                     percentNums,
                     birthYearNums,
@@ -56,6 +60,7 @@ export default function RegisterPlanPage() {
     }
 
     const addInheritor = () => {
+        setNames([...names, ''])
         setInheritors([...inheritors, ''])
         setBirthYears([...birthYears, ''])
         setPercentages([...percentages, ''])
@@ -69,6 +74,16 @@ export default function RegisterPlanPage() {
 
             {inheritors.map((_, index) => (
                 <div key={index} className="mb-4 space-y-2">
+                    <input
+                        className="w-full border p-2 rounded"
+                        placeholder="name"
+                        value={names[index]}
+                        onChange={(e) => {
+                            const updated = [...names]
+                            updated[index] = e.target.value
+                            setNames(updated)
+                        }}
+                    />
                     <input
                         className="w-full border p-2 rounded"
                         placeholder="Inheritor address"

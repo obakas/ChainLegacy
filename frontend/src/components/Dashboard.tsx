@@ -1,22 +1,67 @@
 // app/dashboard.tsx
 "use client";
 
-import { writeContract, waitForTransactionReceipt, watchContractEvent } from '@wagmi/core';
-import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect } from 'react';
+import { writeContract, waitForTransactionReceipt, watchContractEvent, readContract } from '@wagmi/core';
+import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect, useState } from 'react';
 import { useAccount, useChainId, useConfig } from 'wagmi';
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants';
 import toast from 'react-hot-toast';
-import {   usePlan, useAllocatedPercent, useUnallocatedPercent } from '@/hooks/usePlan';
+import { usePlan } from '@/hooks/usePlan';
+
+interface Inheritor {
+  name: string;
+  inheritor: string;
+  percent: number;
+  unlockTimestamp: bigint | number | string;
+}
+
+interface PlanType {
+  inheritors: Inheritor[];
+  timeout: bigint | number | string;
+  lastPing: bigint | number | string;
+  active: boolean;
+  allocatedPercent: number;
+}
 
 export default function Dashboard() {
   const { address } = useAccount();
   const chainId = useChainId();
   const config = useConfig();
+  const [allocatedPercent, setAllocatedPercent] = useState<number>(0);
+  const [unallocatedPercent, setUnallocatedPercent] = useState<number>(0);
+  const [plan2, setPlan2] = useState<PlanType | null>(null);
+
+
 
   const { data: plan, loading, error } = usePlan();
 
-  const allocatedPercent = plan?.totalAssignedPercent ?? 0;
-  const unallocatedPercent = 100 - allocatedPercent;
+
+  useEffect(() => {
+    const fetchData = async () => {
+
+      // Replace with your actual logic
+      if (!address) return;
+      try {
+        const allocatedRaw = await readContract(config, {
+          address: ChainLegacy_Address,
+          abi: ChainLegacy_ABI,
+          functionName: "getUnallocatedPercent",
+          args: [address],
+          chainId,
+        });
+        const allocated = Number(allocatedRaw);
+        const unallocated = 100 - allocated;
+        setAllocatedPercent(unallocated);
+        setUnallocatedPercent(allocated);
+      } catch (err: any) {
+        toast.error(`Couldn't fetch balance: ${err.message || err}`);
+      }
+    };
+
+    fetchData();
+  }, [address, config, chainId]);
+
+
 
   const getWarningColor = () => {
     if (unallocatedPercent === 100) return "bg-red-100 border-red-500 text-red-700";
@@ -43,13 +88,13 @@ export default function Dashboard() {
     },
   });
 
-  const handleRemoveInheritor = async (inheritor: string) => {
+  const handleRemoveInheritor = async (inheritor: string, name: string) => {
     try {
       const tx = await writeContract(config, {
         address: ChainLegacy_Address,
         abi: ChainLegacy_ABI,
         functionName: "removeInheritor",
-        args: [inheritor],
+        args: [inheritor, name],
       });
 
       await waitForTransactionReceipt(config, { hash: tx });
@@ -60,6 +105,8 @@ export default function Dashboard() {
       toast.error(err?.message || "Failed to remove inheritor.");
     }
   };
+
+
 
   if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;
   if (loading) return <p className="text-center mt-12">Loading your plan...</p>;
@@ -79,19 +126,14 @@ export default function Dashboard() {
 
       {plan.inheritors.length > 0 ? (
         <ul className="list-disc list-inside space-y-2">
-          {plan.inheritors.map((i: { inheritor: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; percent: string | number | bigint | boolean | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | ReactPortal | Promise<string | number | bigint | boolean | ReactPortal | ReactElement<unknown, string | JSXElementConstructor<any>> | Iterable<ReactNode> | null | undefined> | null | undefined; unlockTimestamp: any; }, idx: Key | null | undefined) => (
+          {plan.inheritors.map((i: Inheritor, idx: number) => (
             <li key={idx} className="flex justify-between items-center bg-gray-800 rounded p-2">
               <div>
-                <strong>{i.inheritor}</strong> — {i.percent}% — Unlocks on {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
+                <strong>{i.name}</strong> ({i.inheritor}) — {i.percent}% — Unlocks on{" "}
+                {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
               </div>
               <button
-                onClick={() => {
-                  if (typeof i.inheritor === "string") {
-                    handleRemoveInheritor(i.inheritor);
-                  } else {
-                    toast.error("Invalid inheritor address.");
-                  }
-                }}
+                onClick={() => handleRemoveInheritor(i.inheritor, i.name)}
                 className="ml-4 px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
               >
                 Remove
@@ -99,6 +141,7 @@ export default function Dashboard() {
             </li>
           ))}
         </ul>
+
       ) : (
         <p>No inheritors registered yet.</p>
       )}
@@ -122,12 +165,12 @@ export default function Dashboard() {
         Ping KeepAlive
       </button>
 
-      {unallocatedPercent > 0 && (
+      {Number(`${unallocatedPercent}`) > 0 && (
         <div className={`${getWarningColor()} border-l-4 p-4 rounded-xl my-4`}>
           <p className="font-bold">Warning</p>
           <p>
-            You’ve only assigned {allocatedPercent}% of your inheritance.
-            The remaining {unallocatedPercent}% will be refunded to you if your plan is executed.
+            You’ve only assigned {`${allocatedPercent}`}% of your inheritance.
+            The remaining {`${unallocatedPercent}`}% will be refunded to you if your plan is executed.
           </p>
         </div>
       )}

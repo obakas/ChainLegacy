@@ -75,6 +75,8 @@ contract ChainLegacyTest is Test {
     // }
 
     function testRegisterPlanMismatchedArrays() public {
+        string[] memory names = new string[](1);
+        names[0] = "Inheritor 1";
         address[] memory inheritors = new address[](2);
         inheritors[0] = inheritor1;
         inheritors[1] = inheritor2;
@@ -85,9 +87,11 @@ contract ChainLegacyTest is Test {
         birthYears[1] = 1952;
         address[] memory tokens = new address[](1);
         tokens[0] = address(token);
+        
+    
 
         vm.expectRevert("Mismatched arrays");
-        legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
+        legacy.registerPlan( names, inheritors, percentages, birthYears, 1 days, tokens);
     }
 
     // function testRegisterPlanPercentagesNot100() public {
@@ -108,6 +112,8 @@ contract ChainLegacyTest is Test {
     // }
 
     function testKeepAlivePreventsUpkeep() public {
+        string[] memory names = new string[](1);
+        names[0] = "Inheritor 1";
         address[] memory inheritors = new address[](1);
         inheritors[0] = inheritor1;
         uint256[] memory percentages = new uint256[](1);
@@ -117,7 +123,7 @@ contract ChainLegacyTest is Test {
         address[] memory tokens = new address[](1);
         tokens[0] = address(token);
 
-        legacy.registerPlan(inheritors, percentages, birthYears, 1 days, tokens);
+        legacy.registerPlan( names, inheritors, percentages, birthYears, 1 days, tokens);
         vm.warp(block.timestamp + 12 hours);
         legacy.keepAlive();
         vm.warp(block.timestamp + 12 hours + 1);
