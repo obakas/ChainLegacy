@@ -3,10 +3,10 @@
 import { writeContract, waitForTransactionReceipt, watchContractEvent, readContract } from '@wagmi/core';
 import { useEffect, useState } from 'react';
 import { useAccount, useChainId, useConfig } from 'wagmi';
-import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants';
+import { ChainLegacy_ABI, ChainLegacy_Address, LegacyToken_Address } from '@/constants';
 import toast from 'react-hot-toast';
 import { usePlan } from '@/hooks/usePlan';
-// import {TimeoutCountdown} from '@/components/TimeoutCountdown';
+import { TimeoutCountdown } from '@/components/TimeoutCountdown';
 
 interface Inheritor {
   name: string;
@@ -29,6 +29,9 @@ export default function Dashboard() {
   const config = useConfig();
   const [allocatedPercent, setAllocatedPercent] = useState<number>(0);
   const [unallocatedPercent, setUnallocatedPercent] = useState<number>(0);
+  const [nativeBalance, setNativeBalance] = useState<bigint>(BigInt(0));
+  const [erc20Balance, setErc20Balance] = useState<bigint>(BigInt(0));
+
 
 
 
@@ -36,6 +39,39 @@ export default function Dashboard() {
 
 
   useEffect(() => {
+    if (!address) return;
+
+    const fetchBalances = async () => {
+      try {
+        // Native balance (via getPlan or separate mapping)
+        const native = await readContract(config, {
+          address: ChainLegacy_Address,
+          abi: ChainLegacy_ABI,
+          functionName: "getPlan",
+          args: [address],
+          chainId,
+        });
+
+        const nativeBal = (native as any[])[6]; // assuming it's the 7th return value (index 6)
+        setNativeBalance(BigInt(nativeBal));
+
+        // ERC20 balance via getERC20Balance
+        const erc20 = await readContract(config, {
+          address: ChainLegacy_Address,
+          abi: ChainLegacy_ABI,
+          functionName: "getERC20Balance",
+          args: [address, LegacyToken_Address],
+          chainId,
+        });
+
+        setErc20Balance(BigInt(erc20 as string | number | bigint));
+      } catch (err) {
+        console.error("❌ Balance fetch error:", err);
+      }
+    };
+
+
+
     const fetchData = async () => {
       if (!address) return;
       try {
@@ -56,6 +92,7 @@ export default function Dashboard() {
     };
 
     fetchData();
+    fetchBalances();
   }, [address, config, chainId]);
 
 
@@ -114,9 +151,13 @@ export default function Dashboard() {
     <div className="max-w-2xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6">Your ChainLegacy Plan</h2>
 
-      {/* {plan && (
-        <TimeoutCountdown timeout={Number(plan.timeout)} lastPing={Number(plan.lastPing)} />
-      )} */}
+      {plan && (
+        <TimeoutCountdown
+          timeout={Number(plan.timeout)}
+          lastPing={Number(plan.lastPing)}
+        />
+      )}
+
 
 
       <div className="bg-white shadow text-black rounded p-4 space-y-2 mb-6">
@@ -125,6 +166,13 @@ export default function Dashboard() {
         <p><strong>Last Ping:</strong> {plan.lastPing !== BigInt(0) ? new Date(Number(plan.lastPing) * 1000).toLocaleString() : "N/A"}</p>
         <p><strong>Plan Active:</strong> {plan.active ? "Yes" : "No"}</p>
       </div>
+
+      <div className="bg-gray-900 text-white p-4 rounded-lg shadow mb-4">
+        <h3 className="font-semibold text-lg mb-2">Deposited Assets</h3>
+        <p><strong>Native Token (e.g. ETH):</strong> {Number(nativeBalance) / 1e18}</p>
+        <p><strong>$LEGACY Tokens:</strong> {Number(erc20Balance) / 1e18}</p>
+      </div>
+
 
       {plan.inheritors.length > 0 ? (
         <ul className="list-disc list-inside space-y-2">
