@@ -1,16 +1,27 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.28;
 
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "lib/chainlink-brownie-contracts/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import {AutomationCompatibleInterface} from "lib/chainlink-brownie-contracts/contracts/src/v0.8/automation/interfaces/AutomationCompatibleInterface.sol";
+import {AggregatorV3Interface} from "../lib/chainlink-brownie-contracts/contracts/src/v0.8/shared/interfaces/AggregatorV3Interface.sol";
+import {PriceConverter} from "./PriceConverter.sol";
+
+error ChainLegacy__NotEnoughUSD();
+error ChainLegacy__WithdrawFailed();
+error ChainLegacy__OnlyToken();
 
 contract ChainLegacy is AutomationCompatibleInterface {
-    event InheritanceExecuted(address indexed planOwner, uint256 timestamp);
+    using PriceConverter for uint256;
+
+    address public immutable legacyToken;
+    AggregatorV3Interface private s_priceFeed;
+    uint256 public constant MINIMUM_USD = 5e18;
+
     struct InheritorInfo {
         string name;
         address inheritor;
-        uint256 percent; // out of 100
-        uint256 unlockTimestamp; // when this inheritor is eligible (e.g. turns 18)   
+        uint256 percent;
+        uint256 unlockTimestamp;
     }
 
     struct LegacyPlan {
@@ -21,39 +32,51 @@ contract ChainLegacy is AutomationCompatibleInterface {
         uint256 lastPing;
         bool active;
         uint256 totalAssignedPercent;
+        uint256 nativeBalance;
+        mapping(address => uint256) erc20Balances;
     }
 
-    mapping(address => LegacyPlan) public plans;
+    mapping(address => LegacyPlan) private plans;
+
+    event NativeDeposit(address indexed from, uint256 amount);
+    event ERC20Deposit(address indexed from, uint256 amount);
+    event InheritanceExecuted(address indexed planOwner, uint256 timestamp);
+
+    constructor(address _legacyToken, address _priceFeed) {
+        legacyToken = _legacyToken;
+        s_priceFeed = AggregatorV3Interface(_priceFeed);
+    }
 
     modifier onlyActive(address user) {
         require(plans[user].active, "Plan not active");
         _;
     }
 
-    
     function registerPlan(
         string[] calldata names,
         address[] calldata inheritors,
         uint256[] calldata percentages,
         uint256[] calldata birthYears,
         uint256 timeout,
-        address[] calldata tokens // address[] calldata nfts
+        address[] calldata tokens
     ) external {
         require(
             inheritors.length == percentages.length &&
-                inheritors.length == birthYears.length
-                && inheritors.length == names.length,
+                inheritors.length == birthYears.length &&
+                inheritors.length == names.length,
             "Mismatched arrays"
         );
         require(inheritors.length > 0, "No inheritors");
 
         uint256 total;
-        delete plans[msg.sender].inheritors;
+        LegacyPlan storage plan = plans[msg.sender];
+        delete plan.inheritors;
+
         for (uint256 i = 0; i < inheritors.length; i++) {
             total += percentages[i];
             uint256 unlockTime = block.timestamp +
                 ((birthYears[i] + 18 - 1970) * 365 days);
-            plans[msg.sender].inheritors.push(
+            plan.inheritors.push(
                 InheritorInfo({
                     name: names[i],
                     inheritor: inheritors[i],
@@ -62,23 +85,25 @@ contract ChainLegacy is AutomationCompatibleInterface {
                 })
             );
         }
+
         require(total <= 100, "Percentages cannot exceed 100");
 
-        plans[msg.sender].tokens = tokens;
-        plans[msg.sender].timeout = timeout;
-        plans[msg.sender].lastPing = block.timestamp;
-        plans[msg.sender].active = true;
-        plans[msg.sender].totalAssignedPercent = total;
+        plan.names = names;
+        plan.tokens = tokens;
+        plan.timeout = timeout;
+        plan.lastPing = block.timestamp;
+        plan.active = true;
+        plan.totalAssignedPercent = total;
     }
-
 
     function keepAlive() external onlyActive(msg.sender) {
         plans[msg.sender].lastPing = block.timestamp;
     }
 
-
-    function registerInheritor(address inheritor, uint256 percent,
-    string calldata name
+    function registerInheritor(
+        address inheritor,
+        uint256 percent,
+        string calldata name
     ) external {
         LegacyPlan storage plan = plans[msg.sender];
 
@@ -87,7 +112,10 @@ contract ChainLegacy is AutomationCompatibleInterface {
 
         // Check if already registered
         for (uint256 i = 0; i < plan.inheritors.length; i++) {
-            require(plan.inheritors[i].inheritor != inheritor, "Already registered");
+            require(
+                plan.inheritors[i].inheritor != inheritor,
+                "Already registered"
+            );
         }
 
         require(
@@ -101,120 +129,70 @@ contract ChainLegacy is AutomationCompatibleInterface {
                 inheritor: inheritor,
                 percent: percent,
                 unlockTimestamp: block.timestamp // or set as needed
-                
             })
         );
         plan.totalAssignedPercent += percent;
     }
 
-
-
-    function removeInheritor(address inheritor, string memory name) external {
-    LegacyPlan storage plan = plans[msg.sender];
-    bool found = false;
-    uint256 percent = 0;
-    uint256 index = 0;
-
-    for (uint256 i = 0; i < plan.inheritors.length; i++) {
-        if (
-            plan.inheritors[i].inheritor == inheritor &&
-            keccak256(abi.encodePacked(plan.inheritors[i].name)) == keccak256(abi.encodePacked(name))
-        ) {
-            found = true;
-            percent = plan.inheritors[i].percent;
-            index = i;
-            break;
+    function fundWithNative() public payable {
+        if (msg.value.getConversionRate(s_priceFeed) < MINIMUM_USD) {
+            revert ChainLegacy__NotEnoughUSD();
         }
+        plans[msg.sender].nativeBalance += msg.value;
+        emit NativeDeposit(msg.sender, msg.value);
     }
 
-    require(found, "Inheritor not found");
-
-    // Remove inheritor
-    for (uint256 i = index; i < plan.inheritors.length - 1; i++) {
-        plan.inheritors[i] = plan.inheritors[i + 1];
-    }
-    plan.inheritors.pop();
-
-    // plan.allocatedPercent -= percent;
-}
-
-
-    // function removeInheritor(address inheritor, string memory name) external {
-    //     LegacyPlan storage plan = plans[msg.sender];
-    //     bool found = false;
-    //     uint256 percent = 0;
-    //     uint256 index = 0;
-
-    //     for (uint256 i = 0; i < plan.inheritors.length; i++) {
-    //         if (plan.inheritors[i].inheritor == inheritor) {
-    //             found = true;
-    //             percent = plan.inheritors[i].percent;
-    //             index = i;
-    //             break;
-    //         }
-    //     }
-
-    //     require(found, "Inheritor not found");
-
-    //     // Subtract percent
-    //     plan.totalAssignedPercent -= percent;
-
-    //     // Remove from array
-    //     plan.inheritors[index] = plan.inheritors[plan.inheritors.length - 1];
-    //     plan.inheritors.pop();
-    // }
-
-
-    function getUnallocatedPercent(address user) public view returns (uint256) {
-        return 100 - plans[user].totalAssignedPercent;
+    receive() external payable {
+        fundWithNative();
     }
 
-    function getAssignedPercent(
-        address user
-    ) public view returns (uint256) {
-        return plans[user].totalAssignedPercent;
+    fallback() external payable {
+        fundWithNative();
     }
 
-    function checkUpkeep(
-        bytes calldata checkData
-    )
-        external
-        view
-        override
-        returns (bool upkeepNeeded, bytes memory performData)
-    {
-        address user = abi.decode(checkData, (address));
-        LegacyPlan storage plan = plans[user];
-        if (plan.active && block.timestamp - plan.lastPing > plan.timeout) {
-            upkeepNeeded = true;
-            performData = checkData;
-        }
+    function deposit(address from, uint256 amount) external {
+        if (msg.sender != legacyToken) revert ChainLegacy__OnlyToken();
+        plans[from].erc20Balances[legacyToken] += amount;
+        emit ERC20Deposit(from, amount);
     }
 
-    function performUpkeep(bytes calldata performData) external override {
-        address user = abi.decode(performData, (address));
-        LegacyPlan storage plan = plans[user];
-        require(plan.active, "Inactive plan");
+    function withdrawNative(uint256 amount) external {
+        LegacyPlan storage plan = plans[msg.sender];
+        require(plan.nativeBalance >= amount, "Insufficient balance");
+        plan.nativeBalance -= amount;
+        (bool success, ) = payable(msg.sender).call{value: amount}("");
+        if (!success) revert ChainLegacy__WithdrawFailed();
+    }
+
+    function withdrawERC20(uint256 amount) external {
+        LegacyPlan storage plan = plans[msg.sender];
         require(
-            block.timestamp - plan.lastPing > plan.timeout,
-            "Timeout not reached"
+            plan.erc20Balances[legacyToken] >= amount,
+            "Insufficient token balance"
         );
-
-        for (uint256 i = 0; i < plan.tokens.length; i++) {
-            IERC20 token = IERC20(plan.tokens[i]);
-            uint256 totalBalance = token.balanceOf(address(this));
-
-            for (uint256 j = 0; j < plan.inheritors.length; j++) {
-                InheritorInfo memory info = plan.inheritors[j];
-                if (block.timestamp >= info.unlockTimestamp) {
-                    uint256 share = (totalBalance * info.percent) / 100;
-                    token.transfer(info.inheritor, share);
-                }
-            }
-        }
-
-        plan.active = false;
+        plan.erc20Balances[legacyToken] -= amount;
+        require(
+            IERC20(legacyToken).transfer(msg.sender, amount),
+            "Token withdraw failed"
+        );
     }
+
+    function getERC20Balance(
+        address user,
+        address token
+    ) external view returns (uint256) {
+        return plans[user].erc20Balances[token];
+    }
+
+    function getTotalDepositedInUSD(
+        address user
+    ) external view returns (uint256) {
+        return plans[user].nativeBalance.getConversionRate(s_priceFeed);
+    }
+
+    // function getAssignedPercent(address user) public view returns (uint256) {
+    //     return plans[user].totalAssignedPercent;
+    // }
 
     function getPlan(
         address user
@@ -222,12 +200,13 @@ contract ChainLegacy is AutomationCompatibleInterface {
         external
         view
         returns (
-            string[] memory,
-            InheritorInfo[] memory,
-            address[] memory,
-            uint256,
-            uint256,
-            bool
+            string[] memory names,
+            InheritorInfo[] memory inheritors,
+            address[] memory tokens,
+            uint256 timeout,
+            uint256 lastPing,
+            bool active,
+            uint256 nativeBalance
         )
     {
         LegacyPlan storage plan = plans[user];
@@ -237,7 +216,8 @@ contract ChainLegacy is AutomationCompatibleInterface {
             plan.tokens,
             plan.timeout,
             plan.lastPing,
-            plan.active
+            plan.active,
+            plan.nativeBalance
         );
     }
 
@@ -262,5 +242,105 @@ contract ChainLegacy is AutomationCompatibleInterface {
             plan.lastPing,
             plan.active
         );
+    }
+
+    function getUnallocatedPercent(address user) public view returns (uint256) {
+        LegacyPlan storage plan = plans[user];
+        if (!plan.active) return 0; // or maybe return 100, if you want to show all unallocated
+        return 100 - plan.totalAssignedPercent;
+    }
+
+    function removeInheritor(address inheritor, string memory name) external {
+        LegacyPlan storage plan = plans[msg.sender];
+        bool found = false;
+        uint256 percent = 0;
+        uint256 index = 0;
+
+        for (uint256 i = 0; i < plan.inheritors.length; i++) {
+            if (
+                plan.inheritors[i].inheritor == inheritor &&
+                keccak256(abi.encodePacked(plan.inheritors[i].name)) ==
+                keccak256(abi.encodePacked(name))
+            ) {
+                found = true;
+                percent = plan.inheritors[i].percent;
+                index = i;
+                break;
+            }
+        }
+
+        require(found, "Inheritor not found");
+
+        // Remove inheritor
+        for (uint256 i = index; i < plan.inheritors.length - 1; i++) {
+            plan.inheritors[i] = plan.inheritors[i + 1];
+        }
+        plan.inheritors.pop();
+
+        // plan.allocatedPercent -= percent;
+    }
+
+    function performUpkeep(bytes calldata performData) external override {
+        address user = abi.decode(performData, (address));
+        LegacyPlan storage plan = plans[user];
+
+        require(
+            plan.active && (block.timestamp - plan.lastPing > plan.timeout),
+            "Not ready"
+        );
+        plan.active = false;
+
+        for (uint256 i = 0; i < plan.tokens.length; i++) {
+            IERC20 token = IERC20(plan.tokens[i]);
+            uint256 totalBalance = plan.erc20Balances[address(token)];
+            uint256 allocatedTotal = 0;
+
+            for (uint256 j = 0; j < plan.inheritors.length; j++) {
+                InheritorInfo memory info = plan.inheritors[j];
+                if (block.timestamp >= info.unlockTimestamp) {
+                    uint256 share = (totalBalance * info.percent) / 100;
+                    token.transfer(info.inheritor, share);
+                    allocatedTotal += share;
+                }
+            }
+
+            plan.erc20Balances[address(token)] = 0;
+            uint256 refund = totalBalance - allocatedTotal;
+            if (refund > 0) token.transfer(user, refund);
+        }
+
+        uint256 nativeBal = plan.nativeBalance;
+        uint256 nativeAllocated = 0;
+
+        for (uint256 i = 0; i < plan.inheritors.length; i++) {
+            InheritorInfo memory info = plan.inheritors[i];
+            if (block.timestamp >= info.unlockTimestamp) {
+                uint256 share = (nativeBal * info.percent) / 100;
+                payable(info.inheritor).transfer(share);
+                nativeAllocated += share;
+            }
+        }
+
+        plan.nativeBalance = 0;
+        uint256 nativeRefund = nativeBal - nativeAllocated;
+        if (nativeRefund > 0) payable(user).transfer(nativeRefund);
+
+        emit InheritanceExecuted(user, block.timestamp);
+    }
+
+    function checkUpkeep(
+        bytes calldata checkData
+    )
+        external
+        view
+        override
+        returns (bool upkeepNeeded, bytes memory performData)
+    {
+        address user = abi.decode(checkData, (address));
+        LegacyPlan storage plan = plans[user];
+        upkeepNeeded =
+            plan.active &&
+            (block.timestamp - plan.lastPing > plan.timeout);
+        performData = checkData;
     }
 }

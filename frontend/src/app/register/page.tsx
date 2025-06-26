@@ -43,7 +43,8 @@ export default function RegisterPlanPage() {
                     inheritorAddresses,
                     percentNums,
                     birthYearNums,
-                    BigInt(timeout * 86400),
+                    BigInt(120),
+                    // BigInt(timeout * 86400),
                     [] // tokens
                 ]
             },

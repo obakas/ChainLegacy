@@ -1,12 +1,12 @@
-// app/dashboard.tsx
 "use client";
 
 import { writeContract, waitForTransactionReceipt, watchContractEvent, readContract } from '@wagmi/core';
-import { JSXElementConstructor, Key, ReactElement, ReactNode, ReactPortal, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useAccount, useChainId, useConfig } from 'wagmi';
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants';
 import toast from 'react-hot-toast';
 import { usePlan } from '@/hooks/usePlan';
+// import {TimeoutCountdown} from '@/components/TimeoutCountdown';
 
 interface Inheritor {
   name: string;
@@ -29,7 +29,6 @@ export default function Dashboard() {
   const config = useConfig();
   const [allocatedPercent, setAllocatedPercent] = useState<number>(0);
   const [unallocatedPercent, setUnallocatedPercent] = useState<number>(0);
-  const [plan2, setPlan2] = useState<PlanType | null>(null);
 
 
 
@@ -38,8 +37,6 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchData = async () => {
-
-      // Replace with your actual logic
       if (!address) return;
       try {
         const allocatedRaw = await readContract(config, {
@@ -73,7 +70,7 @@ export default function Dashboard() {
     address: ChainLegacy_Address,
     abi: ChainLegacy_ABI,
     eventName: 'InheritanceExecuted',
-    listener(logs) {
+    onLogs(logs) {
       logs.forEach((log: any) => {
         const planOwner = log.args?.planOwner;
         const timestamp = log.args?.timestamp;
@@ -116,6 +113,11 @@ export default function Dashboard() {
   return (
     <div className="max-w-2xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6">Your ChainLegacy Plan</h2>
+
+      {/* {plan && (
+        <TimeoutCountdown timeout={Number(plan.timeout)} lastPing={Number(plan.lastPing)} />
+      )} */}
+
 
       <div className="bg-white shadow text-black rounded p-4 space-y-2 mb-6">
         <p><strong>Inheritor Count:</strong> {plan.inheritors.length}</p>
@@ -177,3 +179,5 @@ export default function Dashboard() {
     </div>
   );
 }
+
+

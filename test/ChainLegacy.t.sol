@@ -13,9 +13,15 @@ contract ChainLegacyTest is Test {
     address public inheritor2 = address(3);
     address public inheritor3 = address(4);
 
+    address private _legacyToken;
+    address private _priceFeed;
+
     function setUp() public {
-        legacy = new ChainLegacy();
         token = new LegacyToken(1_000_000 ether);
+        _legacyToken = address(token);
+        // For testing, use a dummy address for price feed (replace with mock if needed)
+        _priceFeed = address(0x1234);
+        legacy = new ChainLegacy(_legacyToken, _priceFeed);
         token.transfer(owner, 1000 ether);
         vm.startPrank(owner);
         token.approve(address(legacy), 1000 ether);

@@ -3,8 +3,6 @@ import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants';
 import { readContract } from '@wagmi/core';
 import { useState, useEffect } from "react";
 
-
-
 export interface InheritorInfo {
     name: string;
     inheritor: string;
@@ -20,6 +18,8 @@ export interface Plan {
     lastPing: bigint;
     active: boolean;
     totalAssignedPercent: number;
+    nativeBalance: bigint;
+    erc20Balances: { [tokenAddress: string]: bigint };
 }
 
 export const usePlan = () => {
@@ -36,6 +36,7 @@ export const usePlan = () => {
             if (!address) return;
             setLoading(true);
             try {
+                // 🔹 Fetch main plan data (7 items returned now)
                 const raw = await readContract(config, {
                     address: ChainLegacy_Address,
                     abi: ChainLegacy_ABI,
@@ -44,7 +45,7 @@ export const usePlan = () => {
                     chainId,
                 });
 
-                const [names, inheritorsRaw, tokens, timeout, lastPing, active, totalAssignedPercent] = raw as any[];
+                const [names, inheritorsRaw, tokens, timeout, lastPing, active, nativeBalance] = raw as any[];
 
                 const inheritors: InheritorInfo[] = inheritorsRaw.map((i: any) => ({
                     name: i.name,
@@ -53,6 +54,29 @@ export const usePlan = () => {
                     unlockTimestamp: BigInt(i.unlockTimestamp),
                 }));
 
+                // 🔹 Fetch total assigned percent
+                const totalAssignedPercent = await readContract(config, {
+                    address: ChainLegacy_Address,
+                    abi: ChainLegacy_ABI,
+                    functionName: 'getUnallocatedPercent',
+                    args: [address],
+                    chainId,
+                });
+
+                // 🔹 Fetch ERC20 balances per token
+                const erc20Balances: { [address: string]: bigint } = {};
+                for (const token of tokens) {
+                    const balance = await readContract(config, {
+                        address: ChainLegacy_Address,
+                        abi: ChainLegacy_ABI,
+                        functionName: 'getERC20Balance',
+                        args: [address, token],
+                        chainId,
+                    });
+                    erc20Balances[token] = BigInt(balance as string | number | bigint);
+                }
+
+                // 🔹 Set the full plan object
                 setPlan({
                     names,
                     inheritors,
@@ -61,6 +85,8 @@ export const usePlan = () => {
                     lastPing: BigInt(lastPing),
                     active,
                     totalAssignedPercent: Number(totalAssignedPercent),
+                    nativeBalance: BigInt(nativeBalance),
+                    erc20Balances,
                 });
             } catch (err) {
                 setError(err as Error);
@@ -75,4 +101,3 @@ export const usePlan = () => {
 
     return { data: plan, loading, error };
 };
-

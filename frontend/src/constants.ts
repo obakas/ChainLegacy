@@ -1,7 +1,44 @@
-export const ChainLegacy_Address = '0x71c95911e9a5d330f4d621842ec243ee1343292e';
-export const LegacyToken_Address = '0x8464135c8f25da09e49bc8782676a84730c318bc';
+export const ChainLegacy_Address = '0x948B3c65b89DF0B4894ABE91E6D02FE579834F8F';
+export const LegacyToken_Address = '0x71C95911E9a5D330f4D621842EC243EE1343292e';
 
 export const ChainLegacy_ABI = [
+        {
+            "type": "constructor",
+            "inputs": [
+                {
+                    "name": "_legacyToken",
+                    "type": "address",
+                    "internalType": "address"
+                },
+                {
+                    "name": "_priceFeed",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "stateMutability": "nonpayable"
+        },
+        {
+            "type": "fallback",
+            "stateMutability": "payable"
+        },
+        {
+            "type": "receive",
+            "stateMutability": "payable"
+        },
+        {
+            "type": "function",
+            "name": "MINIMUM_USD",
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "stateMutability": "view"
+        },
         {
             "type": "function",
             "name": "checkUpkeep",
@@ -28,10 +65,40 @@ export const ChainLegacy_ABI = [
         },
         {
             "type": "function",
-            "name": "getAssignedPercent",
+            "name": "deposit",
+            "inputs": [
+                {
+                    "name": "from",
+                    "type": "address",
+                    "internalType": "address"
+                },
+                {
+                    "name": "amount",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+        },
+        {
+            "type": "function",
+            "name": "fundWithNative",
+            "inputs": [],
+            "outputs": [],
+            "stateMutability": "payable"
+        },
+        {
+            "type": "function",
+            "name": "getERC20Balance",
             "inputs": [
                 {
                     "name": "user",
+                    "type": "address",
+                    "internalType": "address"
+                },
+                {
+                    "name": "token",
                     "type": "address",
                     "internalType": "address"
                 }
@@ -57,12 +124,12 @@ export const ChainLegacy_ABI = [
             ],
             "outputs": [
                 {
-                    "name": "",
+                    "name": "names",
                     "type": "string[]",
                     "internalType": "string[]"
                 },
                 {
-                    "name": "",
+                    "name": "inheritors",
                     "type": "tuple[]",
                     "internalType": "struct ChainLegacy.InheritorInfo[]",
                     "components": [
@@ -89,24 +156,29 @@ export const ChainLegacy_ABI = [
                     ]
                 },
                 {
-                    "name": "",
+                    "name": "tokens",
                     "type": "address[]",
                     "internalType": "address[]"
                 },
                 {
-                    "name": "",
+                    "name": "timeout",
                     "type": "uint256",
                     "internalType": "uint256"
                 },
                 {
-                    "name": "",
+                    "name": "lastPing",
                     "type": "uint256",
                     "internalType": "uint256"
                 },
                 {
-                    "name": "",
+                    "name": "active",
                     "type": "bool",
                     "internalType": "bool"
+                },
+                {
+                    "name": "nativeBalance",
+                    "type": "uint256",
+                    "internalType": "uint256"
                 }
             ],
             "stateMutability": "view"
@@ -152,6 +224,25 @@ export const ChainLegacy_ABI = [
         },
         {
             "type": "function",
+            "name": "getTotalDepositedInUSD",
+            "inputs": [
+                {
+                    "name": "user",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
             "name": "getUnallocatedPercent",
             "inputs": [
                 {
@@ -178,6 +269,19 @@ export const ChainLegacy_ABI = [
         },
         {
             "type": "function",
+            "name": "legacyToken",
+            "inputs": [],
+            "outputs": [
+                {
+                    "name": "",
+                    "type": "address",
+                    "internalType": "address"
+                }
+            ],
+            "stateMutability": "view"
+        },
+        {
+            "type": "function",
             "name": "performUpkeep",
             "inputs": [
                 {
@@ -188,40 +292,6 @@ export const ChainLegacy_ABI = [
             ],
             "outputs": [],
             "stateMutability": "nonpayable"
-        },
-        {
-            "type": "function",
-            "name": "plans",
-            "inputs": [
-                {
-                    "name": "",
-                    "type": "address",
-                    "internalType": "address"
-                }
-            ],
-            "outputs": [
-                {
-                    "name": "timeout",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                },
-                {
-                    "name": "lastPing",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                },
-                {
-                    "name": "active",
-                    "type": "bool",
-                    "internalType": "bool"
-                },
-                {
-                    "name": "totalAssignedPercent",
-                    "type": "uint256",
-                    "internalType": "uint256"
-                }
-            ],
-            "stateMutability": "view"
         },
         {
             "type": "function",
@@ -303,6 +373,51 @@ export const ChainLegacy_ABI = [
             "stateMutability": "nonpayable"
         },
         {
+            "type": "function",
+            "name": "withdrawERC20",
+            "inputs": [
+                {
+                    "name": "amount",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+        },
+        {
+            "type": "function",
+            "name": "withdrawNative",
+            "inputs": [
+                {
+                    "name": "amount",
+                    "type": "uint256",
+                    "internalType": "uint256"
+                }
+            ],
+            "outputs": [],
+            "stateMutability": "nonpayable"
+        },
+        {
+            "type": "event",
+            "name": "ERC20Deposit",
+            "inputs": [
+                {
+                    "name": "from",
+                    "type": "address",
+                    "indexed": true,
+                    "internalType": "address"
+                },
+                {
+                    "name": "amount",
+                    "type": "uint256",
+                    "indexed": false,
+                    "internalType": "uint256"
+                }
+            ],
+            "anonymous": false
+        },
+        {
             "type": "event",
             "name": "InheritanceExecuted",
             "inputs": [
@@ -320,6 +435,40 @@ export const ChainLegacy_ABI = [
                 }
             ],
             "anonymous": false
+        },
+        {
+            "type": "event",
+            "name": "NativeDeposit",
+            "inputs": [
+                {
+                    "name": "from",
+                    "type": "address",
+                    "indexed": true,
+                    "internalType": "address"
+                },
+                {
+                    "name": "amount",
+                    "type": "uint256",
+                    "indexed": false,
+                    "internalType": "uint256"
+                }
+            ],
+            "anonymous": false
+        },
+        {
+            "type": "error",
+            "name": "ChainLegacy__NotEnoughUSD",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "ChainLegacy__OnlyToken",
+            "inputs": []
+        },
+        {
+            "type": "error",
+            "name": "ChainLegacy__WithdrawFailed",
+            "inputs": []
         }
     ];
 
