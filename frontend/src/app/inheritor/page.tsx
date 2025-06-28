@@ -4,8 +4,15 @@ import { useAccount, useBalance } from "wagmi";
 import { LegacyToken_Address } from "@/constants";
 import { usePlan } from "@/hooks/usePlan";
 
-const BIRTH_YEAR = 1989; // Replace with dynamic user data
+const BIRTH_YEAR = 1989;
 const UNLOCK_AGE = 18;
+
+interface Inheritor {
+    name: string;
+    inheritor: string;
+    percent: number;
+    unlockTimestamp: bigint | number | string;
+}
 
 export default function InheritorPage() {
     const { address } = useAccount();
@@ -21,9 +28,10 @@ export default function InheritorPage() {
         address,
     });
 
-    const { data: myPlan, loading: loadingPlan } = usePlan();
+    const { data: plan, loading, error, refetch } = usePlan();
 
     const [inheritanceFromOthers, setInheritanceFromOthers] = useState<any[]>([]);
+    const [removing, setRemoving] = useState<string | null>(null);
 
     useEffect(() => {
         const now = new Date();
@@ -36,13 +44,10 @@ export default function InheritorPage() {
     useEffect(() => {
         if (!address) return;
 
-        // Fake demo data: in a real app you'd query this from on-chain or subgraph
         const dummyOtherPlans = [
             {
                 owner: "0xABC...123",
-                inheritors: [
-                    { address: address, percent: 25, unlockTimestamp: 1725000000 },
-                ],
+                inheritors: [{ address: address, percent: 25, unlockTimestamp: 1725000000 }],
             },
             {
                 owner: "0xDEF...456",
@@ -80,7 +85,6 @@ export default function InheritorPage() {
                             ) : (
                                 <p><strong>Native Balance:</strong> {nativeBalance?.formatted} {nativeBalance?.symbol}</p>
                             )}
-
                             {loadingLegacy ? (
                                 <p>Loading $LEGACY balance...</p>
                             ) : (
@@ -89,7 +93,7 @@ export default function InheritorPage() {
                         </div>
                     )}
 
-                    {/* 🔐 Inheritance you're receiving from others */}
+                    {/* 🔐 Inheritance from others */}
                     <div className="mb-6">
                         <h3 className="text-xl font-semibold mb-2">💰 Inheritance From Others</h3>
                         {inheritanceFromOthers.length === 0 ? (
@@ -106,24 +110,45 @@ export default function InheritorPage() {
                         )}
                     </div>
 
-                    {/* 📜 People inheriting from YOU */}
-                    <div>
-                        <h3 className="text-xl font-semibold mb-2">🧑‍🤝‍🧑 Your Inheritors</h3>
-                        {loadingPlan ? (
-                            <p>Loading your plan...</p>
-                        ) : (myPlan?.inheritors?.length ?? 0) > 0 ? (
-                            myPlan?.inheritors?.map((inh, idx) => (
-                                <div key={idx} className="bg-gray-800 text-white p-3 rounded mb-2">
-                                    <p><strong>Name:</strong> {inh.name}</p>
-                                    <p><strong>Wallet:</strong> {inh.inheritor}</p>
-                                    <p><strong>Percent:</strong> {inh.percent}%</p>
-                                    <p><strong>Unlocks:</strong> {new Date(Number(inh.unlockTimestamp) * 1000).toLocaleString()}</p>
-                                </div>
-                            ))
-                        ) : (
-                            <p className="text-gray-400">You haven’t added any inheritors yet.</p>
-                        )}
-                    </div>
+                    {/* 📜 Your Inheritors */}
+                    <h3 className="text-xl font-semibold mb-2">🧑‍🤝‍🧑 Your Inheritors</h3>
+                    {(plan?.inheritors?.length ?? 0) > 0 ? (
+                        <ul className="list-disc list-inside space-y-2">
+                            {plan?.inheritors.map((i: Inheritor, idx: number) => {
+                                const nowInSeconds = Math.floor(Date.now() / 1000);
+                                const unlockTimeWithBuffer = Number(i.unlockTimestamp) - 10;
+                                const canRemove = nowInSeconds < unlockTimeWithBuffer;
+
+                                return (
+                                    <li key={idx} className="flex justify-between items-center bg-gray-800 rounded p-2">
+                                        <div>
+                                            <strong>{i.name}</strong> ({i.inheritor}) — {i.percent}% — Unlocks on{" "}
+                                            {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
+                                        </div>
+                                        <div className="flex items-center space-x-2">
+                                            <button
+                                                onClick={async () => {
+                                                    setRemoving(i.inheritor);
+                                                    await plan?.handleRemoveInheritor(i.inheritor, i.name);
+                                                    await refetch(); // 💡 refresh the plan data
+                                                    setRemoving(null);
+                                                }}
+                                                disabled={!canRemove || removing === i.inheritor}
+                                                className={`px-3 py-1 text-sm text-white rounded transition
+                          ${canRemove ? "bg-red-600 hover:bg-red-700" : "bg-gray-500 cursor-not-allowed"}
+                          ${removing === i.inheritor ? "opacity-50 cursor-wait" : ""}`}
+                                            >
+                                                {removing === i.inheritor ? "Removing..." : "Remove"}
+                                            </button>
+                                            {!canRemove && <span className="text-sm text-gray-300">🔒 Locked</span>}
+                                        </div>
+                                    </li>
+                                );
+                            })}
+                        </ul>
+                    ) : (
+                        <p>No inheritors registered yet.</p>
+                    )}
                 </>
             )}
         </div>

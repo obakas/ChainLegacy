@@ -4,7 +4,7 @@ import "./globals.css";
 import { ReactNode } from "react";
 import { Providers } from "./providers";
 import Header from "@/components/Header";
-import { Toaster } from 'react-hot-toast'
+import { Toaster } from 'react-hot-toast';
 
 
 export const metadata: Metadata = {

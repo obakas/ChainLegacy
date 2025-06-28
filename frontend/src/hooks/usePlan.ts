@@ -1,6 +1,6 @@
 import { useAccount, useChainId, useConfig } from 'wagmi';
 import { ChainLegacy_ABI, ChainLegacy_Address } from '@/constants';
-import { readContract } from '@wagmi/core';
+import { readContract, writeContract, waitForTransactionReceipt } from '@wagmi/core';
 import { useState, useEffect, useCallback } from "react";
 import toast from 'react-hot-toast';
 
@@ -18,9 +18,10 @@ export interface Plan {
     timeout: bigint;
     lastPing: bigint;
     active: boolean;
-    totalAssignedPercent: number; // this is the ACTUAL assigned amount
+    totalAssignedPercent: number;
     nativeBalance: bigint;
     erc20Balances: { [tokenAddress: string]: bigint };
+    handleRemoveInheritor: (inheritor: string, name: string) => void;
 }
 
 export const usePlan = () => {
@@ -61,7 +62,7 @@ export const usePlan = () => {
                 chainId,
             });
 
-            const totalAssignedPercent = 100 - Number(unallocatedRaw); // 🧠 correct math
+            const totalAssignedPercent = 100 - Number(unallocatedRaw);
 
             const erc20Balances: { [address: string]: bigint } = {};
             for (const token of tokens) {
@@ -75,8 +76,9 @@ export const usePlan = () => {
                 erc20Balances[token] = BigInt(balance as string | number | bigint);
             }
 
-            setPlan({
-                names,
+            // 👇 Save into state
+            setPlan(() => ({
+                names: [...names],
                 inheritors,
                 tokens,
                 timeout: BigInt(timeout),
@@ -85,7 +87,8 @@ export const usePlan = () => {
                 totalAssignedPercent,
                 nativeBalance: BigInt(nativeBalance),
                 erc20Balances,
-            });
+                handleRemoveInheritor, // hook-scoped function
+            }));
         } catch (err) {
             setError(err as Error);
             console.error('❌ Failed to fetch plan:', err);
@@ -95,6 +98,29 @@ export const usePlan = () => {
         }
     }, [address, chainId, config]);
 
+    const handleRemoveInheritor = useCallback(
+        async (inheritor: string, name: string) => {
+            try {
+                const tx = await writeContract(config, {
+                    address: ChainLegacy_Address,
+                    abi: ChainLegacy_ABI,
+                    functionName: "removeInheritor",
+                    args: [inheritor, name],
+                });
+
+                await waitForTransactionReceipt(config, { hash: tx });
+                toast.success("Inheritor removed successfully!");
+                setTimeout(() => {
+                    fetchPlan(); // small delay for chain sync
+                }, 500);
+            } catch (err: any) {
+                console.error("Error removing inheritor:", err);
+                toast.error(err?.message || "Failed to remove inheritor.");
+            }
+        },
+        [config, fetchPlan]
+    );
+
     useEffect(() => {
         fetchPlan();
     }, [fetchPlan]);
@@ -103,6 +129,6 @@ export const usePlan = () => {
         data: plan,
         loading,
         error,
-        refetch: fetchPlan, // ✅ call this after any mutation!
+        refetch: fetchPlan,
     };
 };

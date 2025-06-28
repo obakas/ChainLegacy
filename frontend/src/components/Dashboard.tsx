@@ -22,15 +22,17 @@ export default function Dashboard() {
 
   const [nativeBalance, setNativeBalance] = useState<bigint>(BigInt(0));
   const [erc20Balance, setErc20Balance] = useState<bigint>(BigInt(0));
+  const [removing, setRemoving] = useState<string | null>(null);
+  const [pinging, setPinging] = useState(false);
 
   const { data: plan, loading, error, refetch } = usePlan();
 
   const allocatedPercent = plan?.totalAssignedPercent ?? 0;
   const unallocatedPercent = 100 - allocatedPercent;
 
-  const currentTime = Math.floor(Date.now() / 1000); // in seconds
+  const currentTime = Math.floor(Date.now() / 1000);
   const pingDeadline = Number(plan?.lastPing) + Number(plan?.timeout);
-  const canPing = currentTime < (pingDeadline - 10); // 10s buffer
+  const canPing = currentTime < (pingDeadline - 10);
 
   const fetchBalances = async () => {
     if (!address) return;
@@ -89,27 +91,6 @@ export default function Dashboard() {
     },
   });
 
-  const handleRemoveInheritor = async (inheritor: string, name: string) => {
-    try {
-      const tx = await writeContract(config, {
-        address: ChainLegacy_Address,
-        abi: ChainLegacy_ABI,
-        functionName: "removeInheritor",
-        args: [inheritor, name],
-      });
-
-      await waitForTransactionReceipt(config, { hash: tx });
-      toast.success("Inheritor removed successfully!");
-      await Promise.all([
-        refetch(),        // ✅ Update the plan
-        fetchBalances(),  // ✅ Refresh balances
-      ]);
-    } catch (err: any) {
-      console.error("Error removing inheritor:", err);
-      toast.error(err?.message || "Failed to remove inheritor.");
-    }
-  };
-
   if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;
   if (loading) return <p className="text-center mt-12">Loading your plan...</p>;
   if (error) return <p className="text-center mt-12">Failed to load your plan.</p>;
@@ -149,17 +130,22 @@ export default function Dashboard() {
             return (
               <li key={idx} className="flex justify-between items-center bg-gray-800 rounded p-2">
                 <div>
-                  <strong>{i.name}</strong> ({i.inheritor}) — {i.percent}% — Unlocks on{" "}
-                  {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
+                  <strong>{i.name}</strong> ({i.inheritor}) — {i.percent}% — Unlocks on {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
                 </div>
                 <div className="flex items-center space-x-2">
                   <button
-                    onClick={() => handleRemoveInheritor(i.inheritor, i.name)}
-                    className={`px-3 py-1 text-sm text-white rounded transition ${canRemove ? "bg-red-600 hover:bg-red-700" : "bg-gray-500 cursor-not-allowed"
-                      }`}
-                    disabled={!canRemove}
+                    onClick={async () => {
+                      setRemoving(i.inheritor);
+                      try {
+                        await plan?.handleRemoveInheritor(i.inheritor, i.name);
+                      } finally {
+                        setRemoving(null);
+                      }
+                    }}
+                    className={`px-3 py-1 text-sm text-white rounded transition ${canRemove ? "bg-red-600 hover:bg-red-700" : "bg-gray-500 cursor-not-allowed"}`}
+                    disabled={!canRemove || removing === i.inheritor}
                   >
-                    Remove
+                    {removing === i.inheritor ? "Removing..." : "Remove"}
                   </button>
                   {!canRemove && <span className="text-sm text-gray-300">🔒 Locked</span>}
                 </div>
@@ -174,6 +160,7 @@ export default function Dashboard() {
       {canPing ? (
         <button
           onClick={async () => {
+            setPinging(true);
             try {
               const tx = await writeContract(config, {
                 address: ChainLegacy_Address,
@@ -185,11 +172,13 @@ export default function Dashboard() {
               await refetch();
             } catch (err: any) {
               toast.error(err?.message || "Failed to ping KeepAlive.");
+            } finally {
+              setPinging(false);
             }
           }}
           className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 mt-6"
         >
-          Ping KeepAlive
+          {pinging ? "Pinging..." : "Ping KeepAlive"}
         </button>
       ) : (
         <p className="text-red-600 font-semibold mt-4">
