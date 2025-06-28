@@ -8,6 +8,8 @@ import {LegacyToken} from "src/LegacyToken.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 
 contract DeployChainLegacy is Script {
+    uint256 constant TOKEN_VALUE = 1_000_000 ether;
+
     function run() external {
         // Set deployer private key in env (or paste into script)
         uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
@@ -21,7 +23,7 @@ contract DeployChainLegacy is Script {
         vm.startBroadcast(deployerPrivateKey);
 
         // Optional: deploy a demo ERC20 token with 1 million supply
-        LegacyToken token = new LegacyToken(1_000_000 ether);
+        LegacyToken token = new LegacyToken(TOKEN_VALUE);
 
         // Deploy ChainLegacy contract
         ChainLegacy legacy = new ChainLegacy(address(token), ethUsdPriceFeed);

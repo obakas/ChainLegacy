@@ -2,9 +2,9 @@
 import { useEffect, useState } from "react";
 import { useAccount, useBalance } from "wagmi";
 import { LegacyToken_Address } from "@/constants";
-import { useRemoveInheritor } from '@/hooks/useRemoveInheritor'
+import { usePlan } from "@/hooks/usePlan";
 
-const BIRTH_YEAR = 2015; // Replace with dynamic value if possible
+const BIRTH_YEAR = 1989; // Replace with dynamic user data
 const UNLOCK_AGE = 18;
 
 export default function InheritorPage() {
@@ -12,10 +12,18 @@ export default function InheritorPage() {
     const [isUnlocked, setIsUnlocked] = useState(false);
     const [age, setAge] = useState<number | null>(null);
 
-    const { data, isLoading } = useBalance({
+    const { data: legacyBalance, isLoading: loadingLegacy } = useBalance({
         address,
         token: LegacyToken_Address,
     });
+
+    const { data: nativeBalance, isLoading: loadingNative } = useBalance({
+        address,
+    });
+
+    const { data: myPlan, loading: loadingPlan } = usePlan();
+
+    const [inheritanceFromOthers, setInheritanceFromOthers] = useState<any[]>([]);
 
     useEffect(() => {
         const now = new Date();
@@ -25,48 +33,99 @@ export default function InheritorPage() {
         setIsUnlocked(calculatedAge >= UNLOCK_AGE);
     }, []);
 
-    // Dummy plan object for demonstration; replace with real data as needed
-    const plan = {
-        inheritors: [] as string[], // Example: ['0x123...', '0x456...']
-    };
+    useEffect(() => {
+        if (!address) return;
+
+        // Fake demo data: in a real app you'd query this from on-chain or subgraph
+        const dummyOtherPlans = [
+            {
+                owner: "0xABC...123",
+                inheritors: [
+                    { address: address, percent: 25, unlockTimestamp: 1725000000 },
+                ],
+            },
+            {
+                owner: "0xDEF...456",
+                inheritors: [],
+            },
+        ];
+
+        const filtered = dummyOtherPlans.filter(plan =>
+            plan.inheritors.some((i: any) => i.address.toLowerCase() === address?.toLowerCase())
+        );
+
+        setInheritanceFromOthers(filtered);
+    }, [address]);
 
     return (
-        <div className="max-w-md mx-auto p-6">
-            <h2 className="text-xl font-semibold mb-4">Inheritor Dashboard</h2>
+        <div className="max-w-2xl mx-auto p-6">
+            <h2 className="text-2xl font-bold mb-6">Inheritor Dashboard</h2>
 
-            {!address && <p>Connect your wallet to view your inheritance.</p>}
-            {address && age !== null && (
-                <p className="mb-4">Your age: <strong>{age}</strong></p>
-            )}
+            {!address && <p>Please connect your wallet to view your dashboard.</p>}
 
-            {address && age !== null && !isUnlocked && (
-                <p className="text-yellow-600 font-semibold">You are not yet eligible to claim your inheritance. Come back when you turn 18.</p>
-            )}
-
-            {address && isUnlocked && (
+            {address && (
                 <>
-                    {isLoading && <p>Loading balance...</p>}
-                    {data && (
-                        <div className="mt-4">
-                            <p><strong>Your Wallet:</strong> {address}</p>
-                            <p><strong>$LEGACY Balance:</strong> {data.formatted} {data.symbol}</p>
+                    <p className="mb-4">Your age: <strong>{age ?? "..."}</strong></p>
+
+                    {age !== null && !isUnlocked && (
+                        <p className="text-yellow-500 font-semibold">
+                            🔒 You’re too young to claim inheritance. Come back when you're 18.
+                        </p>
+                    )}
+
+                    {age !== null && isUnlocked && (
+                        <div className="bg-gray-900 text-white p-4 rounded-lg shadow mb-6">
+                            {loadingNative ? (
+                                <p>Loading native balance...</p>
+                            ) : (
+                                <p><strong>Native Balance:</strong> {nativeBalance?.formatted} {nativeBalance?.symbol}</p>
+                            )}
+
+                            {loadingLegacy ? (
+                                <p>Loading $LEGACY balance...</p>
+                            ) : (
+                                <p><strong>$LEGACY Balance:</strong> {legacyBalance?.formatted} {legacyBalance?.symbol}</p>
+                            )}
                         </div>
                     )}
+
+                    {/* 🔐 Inheritance you're receiving from others */}
+                    <div className="mb-6">
+                        <h3 className="text-xl font-semibold mb-2">💰 Inheritance From Others</h3>
+                        {inheritanceFromOthers.length === 0 ? (
+                            <p className="text-gray-400">You are not listed as an inheritor in any plans.</p>
+                        ) : (
+                            inheritanceFromOthers.map((plan, idx) => (
+                                <div key={idx} className="bg-gray-800 text-white p-3 rounded mb-2">
+                                    <p><strong>From:</strong> {plan.owner}</p>
+                                    <p><strong>Percent:</strong> {
+                                        plan.inheritors.find((i: { address: string; }) => i.address.toLowerCase() === address?.toLowerCase())?.percent
+                                    }%</p>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* 📜 People inheriting from YOU */}
+                    <div>
+                        <h3 className="text-xl font-semibold mb-2">🧑‍🤝‍🧑 Your Inheritors</h3>
+                        {loadingPlan ? (
+                            <p>Loading your plan...</p>
+                        ) : (myPlan?.inheritors?.length ?? 0) > 0 ? (
+                            myPlan?.inheritors?.map((inh, idx) => (
+                                <div key={idx} className="bg-gray-800 text-white p-3 rounded mb-2">
+                                    <p><strong>Name:</strong> {inh.name}</p>
+                                    <p><strong>Wallet:</strong> {inh.inheritor}</p>
+                                    <p><strong>Percent:</strong> {inh.percent}%</p>
+                                    <p><strong>Unlocks:</strong> {new Date(Number(inh.unlockTimestamp) * 1000).toLocaleString()}</p>
+                                </div>
+                            ))
+                        ) : (
+                            <p className="text-gray-400">You haven’t added any inheritors yet.</p>
+                        )}
+                    </div>
                 </>
             )}
-
-            {plan.inheritors.map((addr: string, index: number) => (
-                <div key={addr} className="flex justify-between items-center p-2 border-b border-gray-700">
-                    <span className="text-white">{addr}</span>
-                    <button
-                        onClick={() => useRemoveInheritor({ args: [addr] })}
-                        className="px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700 transition"
-                    >
-                        Remove
-                    </button>
-                </div>
-            ))}
         </div>
     );
 }
-

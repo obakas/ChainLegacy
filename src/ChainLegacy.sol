@@ -56,7 +56,7 @@ contract ChainLegacy is AutomationCompatibleInterface {
         string[] calldata names,
         address[] calldata inheritors,
         uint256[] calldata percentages,
-        uint256[] calldata birthYears,
+        uint256[] calldata birthYears, // not used in demo
         uint256 timeout,
         address[] calldata tokens
     ) external {
@@ -74,8 +74,9 @@ contract ChainLegacy is AutomationCompatibleInterface {
 
         for (uint256 i = 0; i < inheritors.length; i++) {
             total += percentages[i];
-            uint256 unlockTime = block.timestamp +
-                ((birthYears[i] + 18 - 1970) * 365 days);
+
+            uint256 unlockTime = block.timestamp + 3 minutes + (i * 1 minutes); // 🚀 demo mode unlock
+
             plan.inheritors.push(
                 InheritorInfo({
                     name: names[i],
@@ -96,6 +97,7 @@ contract ChainLegacy is AutomationCompatibleInterface {
         plan.totalAssignedPercent = total;
     }
 
+
     function keepAlive() external onlyActive(msg.sender) {
         plans[msg.sender].lastPing = block.timestamp;
     }
@@ -110,7 +112,6 @@ contract ChainLegacy is AutomationCompatibleInterface {
         require(inheritor != address(0), "Invalid address");
         require(percent > 0 && percent <= 100, "Invalid percent");
 
-        // Check if already registered
         for (uint256 i = 0; i < plan.inheritors.length; i++) {
             require(
                 plan.inheritors[i].inheritor != inheritor,
@@ -123,16 +124,19 @@ contract ChainLegacy is AutomationCompatibleInterface {
             "Exceeds 100% allocation"
         );
 
+        uint256 unlockTime = block.timestamp + 3 minutes; // 🔓 demo-ready unlock time
+
         plan.inheritors.push(
             InheritorInfo({
                 name: name,
                 inheritor: inheritor,
                 percent: percent,
-                unlockTimestamp: block.timestamp // or set as needed
+                unlockTimestamp: unlockTime
             })
         );
         plan.totalAssignedPercent += percent;
     }
+
 
     function fundWithNative() public payable {
         if (msg.value.getConversionRate(s_priceFeed) < MINIMUM_USD) {

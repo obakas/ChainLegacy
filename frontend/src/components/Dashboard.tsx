@@ -15,91 +15,58 @@ interface Inheritor {
   unlockTimestamp: bigint | number | string;
 }
 
-interface PlanType {
-  inheritors: Inheritor[];
-  timeout: bigint | number | string;
-  lastPing: bigint | number | string;
-  active: boolean;
-  allocatedPercent: number;
-}
-
 export default function Dashboard() {
   const { address } = useAccount();
   const chainId = useChainId();
   const config = useConfig();
-  const [allocatedPercent, setAllocatedPercent] = useState<number>(0);
-  const [unallocatedPercent, setUnallocatedPercent] = useState<number>(0);
+
   const [nativeBalance, setNativeBalance] = useState<bigint>(BigInt(0));
   const [erc20Balance, setErc20Balance] = useState<bigint>(BigInt(0));
 
+  const { data: plan, loading, error, refetch } = usePlan();
 
+  const allocatedPercent = plan?.totalAssignedPercent ?? 0;
+  const unallocatedPercent = 100 - allocatedPercent;
 
+  const currentTime = Math.floor(Date.now() / 1000); // in seconds
+  const pingDeadline = Number(plan?.lastPing) + Number(plan?.timeout);
+  const canPing = currentTime < (pingDeadline - 10); // 10s buffer
 
-  const { data: plan, loading, error } = usePlan();
+  const fetchBalances = async () => {
+    if (!address) return;
+    try {
+      const native = await readContract(config, {
+        address: ChainLegacy_Address,
+        abi: ChainLegacy_ABI,
+        functionName: "getPlan",
+        args: [address],
+        chainId,
+      });
+      const nativeBal = (native as any[])[6];
+      setNativeBalance(BigInt(nativeBal));
 
+      const erc20 = await readContract(config, {
+        address: ChainLegacy_Address,
+        abi: ChainLegacy_ABI,
+        functionName: "getERC20Balance",
+        args: [address, LegacyToken_Address],
+        chainId,
+      });
+      setErc20Balance(BigInt(erc20 as string | number | bigint));
+    } catch (err) {
+      console.error("❌ Balance fetch error:", err);
+    }
+  };
 
   useEffect(() => {
-    if (!address) return;
-
-    const fetchBalances = async () => {
-      try {
-        // Native balance (via getPlan or separate mapping)
-        const native = await readContract(config, {
-          address: ChainLegacy_Address,
-          abi: ChainLegacy_ABI,
-          functionName: "getPlan",
-          args: [address],
-          chainId,
-        });
-
-        const nativeBal = (native as any[])[6]; // assuming it's the 7th return value (index 6)
-        setNativeBalance(BigInt(nativeBal));
-
-        // ERC20 balance via getERC20Balance
-        const erc20 = await readContract(config, {
-          address: ChainLegacy_Address,
-          abi: ChainLegacy_ABI,
-          functionName: "getERC20Balance",
-          args: [address, LegacyToken_Address],
-          chainId,
-        });
-
-        setErc20Balance(BigInt(erc20 as string | number | bigint));
-      } catch (err) {
-        console.error("❌ Balance fetch error:", err);
-      }
-    };
-
-
-
-    const fetchData = async () => {
-      if (!address) return;
-      try {
-        const allocatedRaw = await readContract(config, {
-          address: ChainLegacy_Address,
-          abi: ChainLegacy_ABI,
-          functionName: "getUnallocatedPercent",
-          args: [address],
-          chainId,
-        });
-        const allocated = Number(allocatedRaw);
-        const unallocated = 100 - allocated;
-        setAllocatedPercent(unallocated);
-        setUnallocatedPercent(allocated);
-      } catch (err: any) {
-        toast.error(`Couldn't fetch balance: ${err.message || err}`);
-      }
-    };
-
-    fetchData();
     fetchBalances();
   }, [address, config, chainId]);
 
-
-
   const getWarningColor = () => {
-    if (unallocatedPercent === 100) return "bg-red-100 border-red-500 text-red-700";
-    if (unallocatedPercent >= 50) return "bg-orange-100 border-orange-500 text-orange-700";
+    if (!plan) return "bg-gray-100 border-gray-400 text-gray-600";
+    const remaining = 100 - plan.totalAssignedPercent;
+    if (remaining === 100) return "bg-red-100 border-red-500 text-red-700";
+    if (remaining >= 50) return "bg-orange-100 border-orange-500 text-orange-700";
     return "bg-yellow-100 border-yellow-500 text-yellow-700";
   };
 
@@ -116,7 +83,7 @@ export default function Dashboard() {
           toast.success(
             `✅ Inheritance executed at ${new Date(Number(timestamp) * 1000).toLocaleTimeString()}`
           );
-          window.location.reload();
+          refetch();
         }
       });
     },
@@ -133,14 +100,15 @@ export default function Dashboard() {
 
       await waitForTransactionReceipt(config, { hash: tx });
       toast.success("Inheritor removed successfully!");
-      window.location.reload();
+      await Promise.all([
+        refetch(),        // ✅ Update the plan
+        fetchBalances(),  // ✅ Refresh balances
+      ]);
     } catch (err: any) {
       console.error("Error removing inheritor:", err);
       toast.error(err?.message || "Failed to remove inheritor.");
     }
   };
-
-
 
   if (!address) return <p className="text-center mt-12">Please connect your wallet.</p>;
   if (loading) return <p className="text-center mt-12">Loading your plan...</p>;
@@ -151,14 +119,12 @@ export default function Dashboard() {
     <div className="max-w-2xl mx-auto p-6">
       <h2 className="text-2xl font-bold mb-6">Your ChainLegacy Plan</h2>
 
-      {plan && (
+      {plan && plan.inheritors.length > 0 && (
         <TimeoutCountdown
           timeout={Number(plan.timeout)}
           lastPing={Number(plan.lastPing)}
         />
       )}
-
-
 
       <div className="bg-white shadow text-black rounded p-4 space-y-2 mb-6">
         <p><strong>Inheritor Count:</strong> {plan.inheritors.length}</p>
@@ -173,59 +139,73 @@ export default function Dashboard() {
         <p><strong>$LEGACY Tokens:</strong> {Number(erc20Balance) / 1e18}</p>
       </div>
 
-
       {plan.inheritors.length > 0 ? (
         <ul className="list-disc list-inside space-y-2">
-          {plan.inheritors.map((i: Inheritor, idx: number) => (
-            <li key={idx} className="flex justify-between items-center bg-gray-800 rounded p-2">
-              <div>
-                <strong>{i.name}</strong> ({i.inheritor}) — {i.percent}% — Unlocks on{" "}
-                {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
-              </div>
-              <button
-                onClick={() => handleRemoveInheritor(i.inheritor, i.name)}
-                className="ml-4 px-3 py-1 text-sm bg-red-600 text-white rounded hover:bg-red-700"
-              >
-                Remove
-              </button>
-            </li>
-          ))}
-        </ul>
+          {plan.inheritors.map((i: Inheritor, idx: number) => {
+            const nowInSeconds = Math.floor(Date.now() / 1000);
+            const unlockTimeWithBuffer = Number(i.unlockTimestamp) - 10;
+            const canRemove = nowInSeconds < unlockTimeWithBuffer;
 
+            return (
+              <li key={idx} className="flex justify-between items-center bg-gray-800 rounded p-2">
+                <div>
+                  <strong>{i.name}</strong> ({i.inheritor}) — {i.percent}% — Unlocks on{" "}
+                  {new Date(Number(i.unlockTimestamp) * 1000).toLocaleString()}
+                </div>
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => handleRemoveInheritor(i.inheritor, i.name)}
+                    className={`px-3 py-1 text-sm text-white rounded transition ${canRemove ? "bg-red-600 hover:bg-red-700" : "bg-gray-500 cursor-not-allowed"
+                      }`}
+                    disabled={!canRemove}
+                  >
+                    Remove
+                  </button>
+                  {!canRemove && <span className="text-sm text-gray-300">🔒 Locked</span>}
+                </div>
+              </li>
+            );
+          })}
+        </ul>
       ) : (
         <p>No inheritors registered yet.</p>
       )}
 
-      <button
-        onClick={async () => {
-          try {
-            const tx = await writeContract(config, {
-              address: ChainLegacy_Address,
-              abi: ChainLegacy_ABI,
-              functionName: "keepAlive",
-            });
-            await waitForTransactionReceipt(config, { hash: tx });
-            toast.success("KeepAlive pinged successfully!");
-          } catch (err: any) {
-            toast.error(err?.message || "Failed to ping KeepAlive.");
-          }
-        }}
-        className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 mt-6"
-      >
-        Ping KeepAlive
-      </button>
+      {canPing ? (
+        <button
+          onClick={async () => {
+            try {
+              const tx = await writeContract(config, {
+                address: ChainLegacy_Address,
+                abi: ChainLegacy_ABI,
+                functionName: "keepAlive",
+              });
+              await waitForTransactionReceipt(config, { hash: tx });
+              toast.success("KeepAlive pinged successfully!");
+              await refetch();
+            } catch (err: any) {
+              toast.error(err?.message || "Failed to ping KeepAlive.");
+            }
+          }}
+          className="bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 mt-6"
+        >
+          Ping KeepAlive
+        </button>
+      ) : (
+        <p className="text-red-600 font-semibold mt-4">
+          ⏱️ KeepAlive window has expired or is too close to timeout. Plan execution may occur anytime now.
+        </p>
+      )}
 
-      {Number(`${unallocatedPercent}`) > 0 && (
+      {plan?.inheritors?.length > 0 && unallocatedPercent > 0 && (
         <div className={`${getWarningColor()} border-l-4 p-4 rounded-xl my-4`}>
           <p className="font-bold">Warning</p>
           <p>
-            You’ve only assigned {`${allocatedPercent}`}% of your inheritance.
-            The remaining {`${unallocatedPercent}`}% will be refunded to you if your plan is executed.
+            You’ve only assigned {plan?.totalAssignedPercent}% of your inheritance.
+            The remaining {100 - plan?.totalAssignedPercent}% will be refunded to you if your plan is executed.
           </p>
         </div>
       )}
     </div>
   );
 }
-
-
