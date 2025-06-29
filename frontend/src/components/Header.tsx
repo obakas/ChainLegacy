@@ -22,9 +22,9 @@ export default function Header({
     const { isConnected } = useAccount();
     const chainId = useChainId();
     const isLocalDev = chainId === 31337
-    
+
     return (
-        <header className="w-full border-b border-gray-200 bg-white/50 backdrop-blur-sm px-4 py-3">
+        <header className="w-full border-b border-gray-700 bg-gray-900/80 backdrop-blur-sm px-4 py-3">
             <div className="mx-auto flex max-w-7xl items-center justify-between">
                 {/* Left side - Logo/Title and GitHub */}
                 <div className="flex items-center gap-4">
@@ -39,7 +39,7 @@ export default function Header({
                     ) : (
                         <Link
                             href="/"
-                            className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors"
+                            className="text-xl font-bold text-gray-100 hover:text-blue-400 transition-colors"
                         >
                             {appName}
                         </Link>
@@ -50,7 +50,7 @@ export default function Header({
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="GitHub repository"
-                        className="text-gray-500 hover:text-gray-700 transition-colors"
+                        className="text-gray-400 hover:text-gray-200 transition-colors"
                         title="GitHub Repository"
                     >
                         <FaGithub size={24} />
@@ -61,7 +61,7 @@ export default function Header({
                         target="_blank"
                         rel="noopener noreferrer"
                         aria-label="YouTube video"
-                        className="text-gray-500 hover:text-gray-700 transition-colors"
+                        className="text-gray-400 hover:text-gray-200 transition-colors"
                         title="Introductory YouTube Video"
                     >
                         <FaYoutube size={28} />
@@ -75,19 +75,19 @@ export default function Header({
                             <nav className="space-x-4">
                                 <Link
                                     href="/register"
-                                    className="text-gray-700 font-bold hover:text-blue-600"
+                                    className="text-gray-300 font-bold hover:text-blue-400"
                                 >
                                     Register
                                 </Link>
                                 <Link
                                     href="/deposit"
-                                    className="text-gray-700 font-bold hover:text-blue-600"
+                                    className="text-gray-300 font-bold hover:text-blue-400"
                                 >
                                     Deposit
                                 </Link>
                                 <Link
                                     href="/inheritor"
-                                    className="text-gray-700 font-bold hover:text-blue-600"
+                                    className="text-gray-300 font-bold hover:text-blue-400"
                                 >
                                     Inheritor
                                 </Link>

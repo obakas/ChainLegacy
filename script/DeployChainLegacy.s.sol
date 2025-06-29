@@ -12,7 +12,7 @@ contract DeployChainLegacy is Script {
 
     function run() external {
         // Set deployer private key in env (or paste into script)
-        uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
+        // uint256 deployerPrivateKey = vm.envUint("PRIVATE_KEY");
 
         HelperConfig helperConfig = new HelperConfig();
         address ethUsdPriceFeed = helperConfig.activeNetworkConfig();
@@ -20,7 +20,8 @@ contract DeployChainLegacy is Script {
 
 
         // Broadcast transaction from deployer
-        vm.startBroadcast(deployerPrivateKey);
+        // vm.startBroadcast(deployerPrivateKey);
+        vm.startBroadcast();
 
         // Optional: deploy a demo ERC20 token with 1 million supply
         LegacyToken token = new LegacyToken(TOKEN_VALUE);

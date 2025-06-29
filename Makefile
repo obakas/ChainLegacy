@@ -13,3 +13,12 @@ deploy-sepolia:
 
 
 
+
+
+deploy-sepolia2:
+	@forge script script/DeployChainLegacy.s.sol --slow --multi --broadcast --private-key $(SEPOLIA_PRIVATE_KEY) --verify
+
+
+
+deploy-sepolia3:
+	@forge script --chain sepolia script/DeployChainLegacy.s.sol:DeployChainLegacy --rpc-url $(SEPOLIA_RPC_URL) --broadcast --verify -vvvv --private-key $(SEPOLIA_PRIVATE_KEY)

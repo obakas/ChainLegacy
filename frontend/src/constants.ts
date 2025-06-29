@@ -885,4 +885,3 @@ export const LegacyToken_ABI = [
             ]
         }
     ];
-    

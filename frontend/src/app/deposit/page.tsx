@@ -1,13 +1,11 @@
 "use client";
 
-import { useState } from "react";
-import { useWriteContract, useSendTransaction, useAccount, useConfig, useChainId, useWaitForTransactionReceipt, } from "wagmi";
+import { useState, useEffect } from "react";
+import { useWriteContract, useSendTransaction, useAccount, useConfig, useChainId, useWaitForTransactionReceipt } from "wagmi";
 import { parseEther } from "viem";
-import { ChainLegacy_ABI, ChainLegacy_Address, LegacyToken_ABI, LegacyToken_Address, } from "@/constants";
+import { ChainLegacy_ABI, ChainLegacy_Address, LegacyToken_ABI, LegacyToken_Address } from "@/constants";
 import toast from "react-hot-toast";
 import { readContract } from "@wagmi/core";
-import { useEffect } from "react";
-
 
 export default function DepositAssetsPage() {
     const { address } = useAccount();
@@ -21,7 +19,6 @@ export default function DepositAssetsPage() {
 
     const [nativeBalance, setNativeBalance] = useState<bigint>(BigInt(0));
     const [erc20Balance, setErc20Balance] = useState<bigint>(BigInt(0));
-
 
     const handleDeposit = async () => {
         if (!amount || parseFloat(amount) <= 0) {
@@ -70,12 +67,12 @@ export default function DepositAssetsPage() {
                 const native = await readContract(config, {
                     address: ChainLegacy_Address,
                     abi: ChainLegacy_ABI,
-                    functionName: "getPlan", // returns `nativeBalance` in latest contract
+                    functionName: "getPlan",
                     args: [address],
                     chainId,
                 });
 
-                const nativeBal = (native as any[])[6]; // assuming nativeBalance is 7th item returned
+                const nativeBal = (native as any[])[6];
                 setNativeBalance(BigInt(nativeBal));
 
                 const erc20 = await readContract(config, {
@@ -95,61 +92,93 @@ export default function DepositAssetsPage() {
         fetchBalances();
     }, [address, config, chainId]);
 
-
     return (
-        <div className="max-w-md mx-auto p-6">
-            <div className="mb-4 bg-gray-100 p-4 rounded shadow-sm text-sm text-black">
-                <p>
-                    <strong>Native Token Balance:</strong>{" "}
-                    {Number(nativeBalance) / 1e18} ETH
-                </p>
-                <p>
-                    <strong>$LEGACY Token Balance:</strong>{" "}
-                    {Number(erc20Balance) / 1e18} $LEGACY
-                </p>
+        <div className="max-w-md mx-auto p-6 bg-gray-900 rounded-xl shadow-lg border border-gray-800 mt-10">
+            <h2 className="text-2xl font-bold text-white mb-6 text-center">Deposit Assets</h2>
+
+            {/* Balance Cards */}
+            <div className="grid grid-cols-2 gap-4 mb-6">
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <p className="text-gray-400 text-sm font-medium">Native Balance</p>
+                    <p className="text-white text-xl font-bold">
+                        {(Number(nativeBalance) / 1e18).toFixed(4)} ETH
+                    </p>
+                </div>
+                <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
+                    <p className="text-gray-400 text-sm font-medium">$LEGACY Balance</p>
+                    <p className="text-white text-xl font-bold">
+                        {(Number(erc20Balance) / 1e18).toFixed(4)} LEGACY
+                    </p>
+                </div>
             </div>
 
-            <h2 className="text-xl font-semibold mb-4">Deposit Assets</h2>
-
-            <div className="mb-4 flex space-x-4">
-                <label className="flex items-center space-x-2 ">
-                    <input
-                        type="radio"
-                        name="assetType"
-                        value="native"
-                        checked={mode === "native"}
-                        onChange={() => setMode("native")}
-                    />
-                    <span>Native Token (e.g. ETH)</span>
-                </label>
-
-                <label className="flex items-center space-x-2 ">
-                    <input
-                        type="radio"
-                        name="assetType"
-                        value="erc20"
-                        checked={mode === "erc20"}
-                        onChange={() => setMode("erc20")}
-                    />
-                    <span>$LEGACY Token</span>
-                </label>
+            {/* Asset Selection */}
+            <div className="mb-6">
+                <p className="text-gray-400 mb-2">Select Asset Type</p>
+                <div className="flex space-x-4">
+                    <button
+                        onClick={() => setMode("native")}
+                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${mode === "native"
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                            }`}
+                    >
+                        Native Token
+                    </button>
+                    <button
+                        onClick={() => setMode("erc20")}
+                        className={`flex-1 py-2 px-4 rounded-lg font-medium transition-colors ${mode === "erc20"
+                                ? "bg-blue-600 text-white"
+                                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
+                            }`}
+                    >
+                        $LEGACY Token
+                    </button>
+                </div>
             </div>
 
-            <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="w-full p-2 border rounded mb-4"
-                placeholder="Amount to deposit"
-                min="0"
-            />
+            {/* Amount Input */}
+            <div className="mb-6">
+                <label htmlFor="amount" className="block text-gray-400 mb-2">
+                    Amount to Deposit
+                </label>
+                <div className="relative">
+                    <input
+                        id="amount"
+                        type="number"
+                        value={amount}
+                        onChange={(e) => setAmount(e.target.value)}
+                        className="w-full p-3 bg-gray-800 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="0.0"
+                        min="0"
+                        step="any"
+                    />
+                    <span className="absolute right-3 top-3 text-gray-400">
+                        {mode === "native" ? "ETH" : "LEGACY"}
+                    </span>
+                </div>
+            </div>
 
+            {/* Deposit Button */}
             <button
                 onClick={handleDeposit}
                 disabled={isPending}
-                className="bg-blue-600 text-white px-6 py-2 rounded hover:bg-blue-700 disabled:opacity-50"
+                className={`w-full py-3 px-4 rounded-lg font-bold text-white transition-colors ${isPending
+                        ? "bg-blue-700 cursor-not-allowed"
+                        : "bg-blue-600 hover:bg-blue-700"
+                    }`}
             >
-                {isPending ? "Depositing..." : `Deposit ${mode === "native" ? "Native" : "$LEGACY"}`}
+                {isPending ? (
+                    <span className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing...
+                    </span>
+                ) : (
+                    `Deposit ${mode === "native" ? "ETH" : "$LEGACY"}`
+                )}
             </button>
         </div>
     );

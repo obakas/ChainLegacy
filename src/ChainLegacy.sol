@@ -97,7 +97,6 @@ contract ChainLegacy is AutomationCompatibleInterface {
         plan.totalAssignedPercent = total;
     }
 
-
     function keepAlive() external onlyActive(msg.sender) {
         plans[msg.sender].lastPing = block.timestamp;
     }
@@ -136,7 +135,6 @@ contract ChainLegacy is AutomationCompatibleInterface {
         );
         plan.totalAssignedPercent += percent;
     }
-
 
     function fundWithNative() public payable {
         if (msg.value.getConversionRate(s_priceFeed) < MINIMUM_USD) {
@@ -284,54 +282,6 @@ contract ChainLegacy is AutomationCompatibleInterface {
         // plan.allocatedPercent -= percent;
     }
 
-    function performUpkeep(bytes calldata performData) external override {
-        address user = abi.decode(performData, (address));
-        LegacyPlan storage plan = plans[user];
-
-        require(
-            plan.active && (block.timestamp - plan.lastPing > plan.timeout),
-            "Not ready"
-        );
-        plan.active = false;
-
-        for (uint256 i = 0; i < plan.tokens.length; i++) {
-            IERC20 token = IERC20(plan.tokens[i]);
-            uint256 totalBalance = plan.erc20Balances[address(token)];
-            uint256 allocatedTotal = 0;
-
-            for (uint256 j = 0; j < plan.inheritors.length; j++) {
-                InheritorInfo memory info = plan.inheritors[j];
-                if (block.timestamp >= info.unlockTimestamp) {
-                    uint256 share = (totalBalance * info.percent) / 100;
-                    token.transfer(info.inheritor, share);
-                    allocatedTotal += share;
-                }
-            }
-
-            plan.erc20Balances[address(token)] = 0;
-            uint256 refund = totalBalance - allocatedTotal;
-            if (refund > 0) token.transfer(user, refund);
-        }
-
-        uint256 nativeBal = plan.nativeBalance;
-        uint256 nativeAllocated = 0;
-
-        for (uint256 i = 0; i < plan.inheritors.length; i++) {
-            InheritorInfo memory info = plan.inheritors[i];
-            if (block.timestamp >= info.unlockTimestamp) {
-                uint256 share = (nativeBal * info.percent) / 100;
-                payable(info.inheritor).transfer(share);
-                nativeAllocated += share;
-            }
-        }
-
-        plan.nativeBalance = 0;
-        uint256 nativeRefund = nativeBal - nativeAllocated;
-        if (nativeRefund > 0) payable(user).transfer(nativeRefund);
-
-        emit InheritanceExecuted(user, block.timestamp);
-    }
-
     function checkUpkeep(
         bytes calldata checkData
     )
@@ -342,9 +292,85 @@ contract ChainLegacy is AutomationCompatibleInterface {
     {
         address user = abi.decode(checkData, (address));
         LegacyPlan storage plan = plans[user];
-        upkeepNeeded =
-            plan.active &&
+
+        bool isExpired = plan.active &&
             (block.timestamp - plan.lastPing > plan.timeout);
+        bool hasInheritors = plan.inheritors.length > 0;
+        bool hasBalance = plan.nativeBalance > 0;
+
+        for (uint i = 0; i < plan.tokens.length; i++) {
+            if (plan.erc20Balances[plan.tokens[i]] > 0) {
+                hasBalance = true;
+                break;
+            }
+        }
+
+        upkeepNeeded = isExpired && hasInheritors && hasBalance;
         performData = checkData;
+    }
+
+    function performUpkeep(bytes calldata performData) external override {
+        address user = abi.decode(performData, (address));
+        LegacyPlan storage plan = plans[user];
+
+        require(
+            plan.active && (block.timestamp - plan.lastPing > plan.timeout),
+            "Not ready"
+        );
+
+        plan.active = false;
+
+        // --------- ERC20 Inheritance ---------
+        for (uint256 i = 0; i < plan.tokens.length; i++) {
+            address tokenAddr = plan.tokens[i];
+            IERC20 token = IERC20(tokenAddr);
+            uint256 totalBalance = plan.erc20Balances[tokenAddr];
+            uint256 remaining = totalBalance;
+
+            // ⚠️ Reset balance BEFORE transfers (reentrancy safe)
+            plan.erc20Balances[tokenAddr] = 0;
+
+            for (uint256 j = 0; j < plan.inheritors.length; j++) {
+                InheritorInfo memory info = plan.inheritors[j];
+
+                if (block.timestamp >= info.unlockTimestamp) {
+                    uint256 share = (totalBalance * info.percent) / 100;
+                    if (share > 0) {
+                        token.transfer(info.inheritor, share);
+                        remaining -= share;
+                    }
+                }
+            }
+
+            // Refund leftovers to owner
+            if (remaining > 0) {
+                token.transfer(user, remaining);
+            }
+        }
+
+        // --------- Native Token Inheritance ---------
+        uint256 nativeBal = plan.nativeBalance;
+        uint256 remainingNative = nativeBal;
+
+        // ⚠️ Reset before transfer
+        plan.nativeBalance = 0;
+
+        for (uint256 i = 0; i < plan.inheritors.length; i++) {
+            InheritorInfo memory info = plan.inheritors[i];
+
+            if (block.timestamp >= info.unlockTimestamp) {
+                uint256 share = (nativeBal * info.percent) / 100;
+                if (share > 0) {
+                    payable(info.inheritor).transfer(share);
+                    remainingNative -= share;
+                }
+            }
+        }
+
+        if (remainingNative > 0) {
+            payable(user).transfer(remainingNative);
+        }
+
+        emit InheritanceExecuted(user, block.timestamp);
     }
 }
