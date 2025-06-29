@@ -4,7 +4,7 @@ import { FaGithub, FaYoutube } from "react-icons/fa";
 import Image from "next/image";
 import Link from "next/link";
 import { useAccount, useChainId } from "wagmi";
-import { TriggerUpkeepButton } from "@/components/TriggerUpkeepButton";
+// import { TriggerUpkeepButton } from "@/components/TriggerUpkeepButton";
 import { useState } from "react";
 import { FaBars, FaTimes } from "react-icons/fa";
 
@@ -93,28 +93,28 @@ export default function Header({
                     {isConnected && (
                         <>
                             <nav className="space-x-4">
-                                <Link
+                                {/* <Link
                                     href="/register"
                                     className="text-gray-300 font-bold hover:text-blue-400"
                                 >
                                     Register
-                                </Link>
-                                <Link
+                                </Link> */}
+                                {/* <Link
                                     href="/deposit"
                                     className="text-gray-300 font-bold hover:text-blue-400"
                                 >
                                     Deposit
-                                </Link>
-                                <Link
+                                </Link> */}
+                                {/* <Link
                                     href="/inheritor"
                                     className="text-gray-300 font-bold hover:text-blue-400"
                                 >
                                     Inheritor
-                                </Link>
+                                </Link> */}
                             </nav>
 
                             {/* 🔧 Trigger upkeep button (dev/demo only) */}
-                            {isLocalDev && <TriggerUpkeepButton />}
+                            {/* {isLocalDev && <TriggerUpkeepButton />} */}
                         </>
                     )}
 
@@ -132,35 +132,35 @@ export default function Header({
                             {isConnected && (
                                 <>
                                     <nav className="flex flex-col space-y-3">
-                                        <Link
+                                        {/* <Link
                                             href="/register"
                                             className="text-gray-300 font-bold hover:text-blue-400 py-2"
                                             onClick={toggleMenu}
                                         >
                                             Register
-                                        </Link>
-                                        <Link
+                                        </Link> */}
+                                        {/* <Link
                                             href="/deposit"
                                             className="text-gray-300 font-bold hover:text-blue-400 py-2"
                                             onClick={toggleMenu}
                                         >
                                             Deposit
-                                        </Link>
-                                        <Link
+                                        </Link> */}
+                                        {/* <Link
                                             href="/inheritor"
                                             className="text-gray-300 font-bold hover:text-blue-400 py-2"
                                             onClick={toggleMenu}
                                         >
                                             Inheritor
-                                        </Link>
+                                        </Link> */}
                                     </nav>
 
                                     {/* 🔧 Trigger upkeep button (dev/demo only) */}
-                                    {isLocalDev && (
+                                    {/* {isLocalDev && (
                                         <div className="py-2">
                                             <TriggerUpkeepButton />
                                         </div>
-                                    )}
+                                    )} */}
                                 </>
                             )}
 
