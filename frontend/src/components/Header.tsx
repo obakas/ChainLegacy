@@ -19,7 +19,7 @@ export default function Header({
     githubUrl = "https://github.com/obakas/ChainLegacy",
     appName = "CHAIN LEGACY",
     logoUrl,
-    videoUrl = "https://youtu.be/cOxl-miweWI",
+    videoUrl = "https://youtu.be/us9rYZU3q7k",
 }: HeaderProps) {
     const { isConnected } = useAccount();
     const chainId = useChainId();
